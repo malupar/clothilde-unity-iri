@@ -9,6 +9,7 @@ public class ObjectData
     public string name;
     public List<Vector3> position = new List<Vector3>();
     public List<Quaternion> rotation = new List<Quaternion>();
+    public int[,] faces = new int[0, 4];
     public float timestamp;
 }
 
@@ -28,6 +29,14 @@ public class JsonExporter : MonoBehaviour
     private bool isExporting = false;
     private SceneDataWrapper dataWrapper = new SceneDataWrapper();
 
+    void Start() {
+        ObjectData f = new ObjectData();
+        f.name = "Mesh - Distribution";
+        var mesh = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None);
+        int[,] faces = mesh.GetFaces();
+        f.faces = faces;
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.E))
@@ -41,9 +50,10 @@ public class JsonExporter : MonoBehaviour
             StartExportProcess();
             string json = JsonUtility.ToJson(dataWrapper, true);
             string path = Path.Combine(exportPath, fileName);
-            if (dataWrapper.objects.Count > 0)
+            if (dataWrapper.objects.Count > 1) {
                 File.WriteAllText(path, json);
-            dataWrapper = new SceneDataWrapper();
+                dataWrapper = new SceneDataWrapper();
+            }
         }
         else
         {
