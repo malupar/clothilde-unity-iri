@@ -285,6 +285,7 @@ public class TriangleMesh : MonoBehaviour
         //meshFilter.mesh = meshUnity;
 
         for (int i = 0; i < numHandles; ++i) {
+            Debug.Log(meshVertices[handles[i].nodeIndex]);
             updateHanldePosition(i, meshVertices[handles[i].nodeIndex]);
         }
     }
