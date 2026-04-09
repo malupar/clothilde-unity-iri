@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-[Serializable]
+[System.Serializable]
 public class ObjectData
 {
     public string name;
@@ -13,7 +12,7 @@ public class ObjectData
     public float timestamp;
 }
 
-[Serializable]
+[System.Serializable]
 public class SceneDataWrapper
 {
     public List<ObjectData> objects = new List<ObjectData>();
@@ -32,8 +31,9 @@ public class JsonExporter : MonoBehaviour
     void Start() {
         ObjectData f = new ObjectData();
         f.name = "Mesh - Distribution";
-        var mesh = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None);
-        int[,] faces = mesh.GetFaces();
+        var meshObject = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None)[0];
+        TriangleMesh mesh = (TriangleMesh) meshObject;
+        int[,] faces = mesh.getFaces();
         f.faces = faces;
     }
 
