@@ -3,12 +3,18 @@ using System.IO;
 using UnityEngine;
 
 [System.Serializable]
+public class Face
+{
+    public List<int> face = new List<int>();
+}
+
+[System.Serializable]
 public class ObjectData
 {
     public string name;
     public List<Vector3> position = new List<Vector3>();
     public List<Quaternion> rotation = new List<Quaternion>();
-    public int[,] faces = new int[0, 4];
+    public List<Face> faces = new List<Face>();
     public float timestamp;
 }
 
@@ -24,9 +30,23 @@ public class JsonExporter : MonoBehaviour
     public string targetTag = "Exportable"; // Only objects with this tag will be saved
     public string fileName = "LiveExport.json";
     private string exportPath = @"C:\Users\maparicio\Documents\My project\Assets\Exports";
-    
+
     private bool isExporting = false;
     private SceneDataWrapper dataWrapper = new SceneDataWrapper();
+
+    private List<Face> turnToMatrix(int[,] faces) {
+        int rows = faces.GetLength(0);
+        int cols = faces.GetLength(1);
+
+        List<Face> faceM = new List<Face>();
+        for (int i = 0; i < rows; ++i) {
+            Face faceMi = new Face();
+            for (int j = 0; j < cols; ++j)
+                faceMi.face.Add(faces[i, j]); 
+            faceM.Add(faceMi);
+        }
+        return faceM;
+    }
 
     void Start() {
         ObjectData f = new ObjectData();
@@ -34,7 +54,9 @@ public class JsonExporter : MonoBehaviour
         var meshObject = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None)[0];
         TriangleMesh mesh = (TriangleMesh) meshObject;
         int[,] faces = mesh.getFaces();
-        f.faces = faces;
+        f.faces = turnToMatrix(faces);
+        f.timestamp = 0;
+        dataWrapper.objects.Add(f);
     }
 
     void Update()
@@ -53,6 +75,7 @@ public class JsonExporter : MonoBehaviour
             if (dataWrapper.objects.Count > 1) {
                 File.WriteAllText(path, json);
                 dataWrapper = new SceneDataWrapper();
+                Start();
             }
         }
         else
