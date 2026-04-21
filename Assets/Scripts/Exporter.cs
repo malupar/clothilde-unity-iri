@@ -70,13 +70,6 @@ public class JsonExporter : MonoBehaviour
         if (!isExporting)
         {
             StartExportProcess();
-            string json = JsonUtility.ToJson(dataWrapper, true);
-            string path = Path.Combine(exportPath, fileName);
-            if (dataWrapper.objects.Count > 1) {
-                File.WriteAllText(path, json);
-                dataWrapper = new SceneDataWrapper();
-                Start();
-            }
         }
         else
         {
@@ -91,35 +84,43 @@ public class JsonExporter : MonoBehaviour
 
     void StopExportProcess()
     {
-        SaveToJson();
-        Debug.Log("Exporting Stopped. Data saved to JSON.");
+        SaveToCsv();
+        Debug.Log("Exporting Stopped. Data saved to CSV.");
     }
 
-    void SaveToJson()
+    void SaveToCsv()
     {
-        GameObject[] targets = GameObject.FindGameObjectsWithTag(targetTag);
-        
-        if (targets.Length == 0)
-        {
-            Debug.LogWarning("No objects found with tag: " + targetTag);
-            return;
-        }
+        string sessionFolder = Path.Combine(exportPath, "Session_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        if (!Directory.Exists(sessionFolder)) Directory.CreateDirectory(sessionFolder);
 
-        foreach (GameObject obj in targets)
+        StringBuilder leftCont = new StringBuilder("Timestamp,X,Y,Z,Xangle,Yangle,Zangle\n");
+        StringBuilder rightCont = new StringBuilder("Timestamp,X,Y,Z,Xangle,Yangle,Zangle\n");
+        StringBuilder mesh = new StringBuilder("X,Y,Z\n");
+        StringBuilder faceSb = new StringBuilder("FaceIndex,VertexIndices\n");
+
+        foreach (var data in collectedData)
         {
-            Debug.Log(obj.name);
-            ObjectData toAdd = new ObjectData();
-            toAdd.name = obj.name;
-            toAdd.timestamp = Time.time;
-            if (obj.name == "MeshRenderer") {
-                var m = obj.GetComponent<TriangleMesh>();
-                toAdd.position = m.getTotalMeshPositions();
+            if (data.rotation.Count > 0) {
+                if (data.name == "Controller (right)") {
+                    rightCont.AppendLine($"{data.timestamp},{data.position[0].x},{data.position[0].y},{data.position[0].z},{data.rotation[0].x},{data.rotation[0].y},{data.rotation[0].z}");
+                } else {
+                    leftCont.AppendLine($"{data.timestamp},{data.position[0].x},{data.position[0].y},{data.position[0].z},{data.rotation[0].x},{data.rotation[0].y},{data.rotation[0].z}");
+                }
             } else {
-                toAdd.position.Add(transform.position);
-                toAdd.rotation.Add(transform.rotation);
+                for (int i = 0; i < data.position.Count; ++i) {
+                    mesh.AppendLine($"{data.position[i].x},{data.position[i].y},{data.position[i].z}");
+                }
             }
-            dataWrapper.objects.Add(toAdd);
+            for (int i = 0; i < data.faces.Count; i++)
+            {
+                string indices = string.Join(";", data.faces[i].face);
+                faceSb.AppendLine($"{i},{indices}");
+            }
         }
 
+        File.WriteAllText(Path.Combine(sessionFolder, "Mesh.csv"), mesh.ToString());
+        File.WriteAllText(Path.Combine(sessionFolder, "Right.csv"), rightCont.ToString());
+        File.WriteAllText(Path.Combine(sessionFolder, "Left.csv"), rightCont.ToString());
+        File.WriteAllText(Path.Combine(sessionFolder, "Faces.csv"), faceSb.ToString());
     }
 }
