@@ -144,9 +144,9 @@ class Cloth:
         self.computeStretchShear()
         self.precomputeBoundaryBending()
 
-    def getPositionsUnity(self):
+    def getPositionsUnity(self, smooth):
         phi_all = self.Am@self.positions
-        for _ in range(2):
+        for _ in range(smooth):
             phi_all = self.S@phi_all
         return phi_all.tolist()
 

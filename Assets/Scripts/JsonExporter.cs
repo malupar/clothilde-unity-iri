@@ -24,18 +24,18 @@ public class JsonExporter : MonoBehaviour
     [Header("Settings")]
     public string targetTag = "Exportable"; // Only objects with this tag will be saved
     public string fileName = "LiveExport.json";
-    private string exportPath = @"C:\Users\maparicio\Documents\My project\Assets\Exports";
+    private string exportPath = @"Z:\vs\clothilde-unity-iri\Assets\Exports";
     
     private bool isExporting = false;
     private SceneDataWrapper dataWrapper = new SceneDataWrapper();
 
-    void Start() {
-        ObjectData f = new ObjectData();
-        f.name = "Mesh - Distribution";
-        var mesh = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None);
-        int[,] faces = mesh.GetFaces();
-        f.faces = faces;
-    }
+    //void Start() {
+    //    ObjectData f = new ObjectData();
+    //    f.name = "Mesh - Distribution";
+    //    var mesh = Object.FindObjectsByType(typeof(TriangleMesh), FindObjectsSortMode.None);
+    //    int[,] faces = mesh.GetFaces();
+    //    f.faces = faces;
+    //}
 
     void Update()
     {
