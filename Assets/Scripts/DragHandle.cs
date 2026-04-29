@@ -1,3 +1,4 @@
+// detects the user drag and reports it
 using UnityEngine;
 using Valve.VR.InteractionSystem;
 

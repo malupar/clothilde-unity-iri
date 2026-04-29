@@ -473,6 +473,7 @@
 "Assets/Legacy/MouseManager.cs"
 "Assets/Legacy/PythonManager.cs"
 "Assets/Legacy/Triangle.cs"
+"Assets/Scripts/BoxGripper.cs"
 "Assets/Scripts/ColorChange.cs"
 "Assets/Scripts/DragController.cs"
 "Assets/Scripts/DragHandle.cs"
