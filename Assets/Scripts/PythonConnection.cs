@@ -9,9 +9,9 @@ public class PythonConnection : MonoBehaviour
 {
 
     // Dependencies for conda env
-    public const string CondaEnvPath = @"C:\Users\abhil\miniconda3\envs\clothilde_env";
+    public const string CondaEnvPath = @"C:\Users\maparicio\miniconda3\envs\cholmod_env";
     public const string PythonDllName = "python311.dll";
-    public const string PythonScripts = @"Z:\vs\clothilde-unity-iri\Assets\Scripts";
+    public const string PythonScripts = @"C:\Users\maparicio\Documents\My project\Assets\Scripts";
 
     private dynamic meshPython;
     private dynamic clothModule;

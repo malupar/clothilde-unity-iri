@@ -23,7 +23,7 @@ public class BoxGripper : MonoBehaviour
     void Awake()
     {
         transform.localScale = boxSize;
-        transform.position = new Vector3(0, 1, 0);
+        transform.position = new Vector3(2, 1, -4);
     }
     void Update()
     {
