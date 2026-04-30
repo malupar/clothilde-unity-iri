@@ -560,7 +560,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoxGripper
   cloth: {fileID: 814687381}
-  boxSize: {x: 0.1, y: 0.1, z: 0.1}
+  boxSize: {x: 0.05, y: 0.05, z: 0.05}
   enableKeyboardTranslation: 1
   enableKeyboardRotation: 1
   translationSpeed: 0.1
