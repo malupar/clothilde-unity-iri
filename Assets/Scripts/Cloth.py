@@ -13,7 +13,7 @@ import polyscope as ps
 from line_profiler import profile
 
 class Cloth:
-    def __init__(self,verts,faces,name="clothilde"):
+    def __init__(self,verts,faces,seams=[],name="clothilde"):
         #positions and velocities
         self.positions = np.array(verts, order = 'F') #current position of the vertices of the mesh
         assert self.positions.shape[1] == 3 and self.positions.ndim == 2, 'Something is wrong with the vertices dimensions'
@@ -37,6 +37,19 @@ class Cloth:
         self.neighbors = None # neighbors dict wrt the edges of the mesh
         self.edges_bnd = np.zeros([0,2]) #edges corresponding to the boundary of the mesh in matrix form
         self.nodes_bnd = None #these are indices wrt vertices, not 3D positions
+
+        #seams treatment
+        self.seams = np.array(seams)
+        self.n_seams = self.seams.shape[0]
+        if self.n_seams > 0:
+            self.Is = np.concatenate([np.arange(3*self.n_seams), np.arange(3*self.n_seams)])
+            self.Js = np.concatenate([self.seams[:,0], self.seams[:,0]+self.n_verts, self.seams[:,0]+2*self.n_verts,
+                                      self.seams[:,1], self.seams[:,1]+self.n_verts, self.seams[:,1]+2*self.n_verts])
+            self.Ks = np.concatenate([np.ones(3*self.n_seams), -np.ones(3*self.n_seams)])
+        else:
+            self.seams = np.zeros((0,2),dtype=int)
+            self.Is = np.array([],dtype=int); self.Js = np.array([],dtype=int); self.Ks = np.array([],dtype=int); 
+        self.seams_IJK = [self.Is,self.Js,self.Ks]
 
         #for self-collisions
         self.rad = None #radious of the balls
@@ -83,6 +96,7 @@ class Cloth:
         #controled nodes
         self.control = [] #for precomputing cholesky factorizations and only updating when necessary
         self.Iu = self.empty; self.Ju = self.empty; self.Ku = self.empty
+        self.share_control = np.zeros((self.n_verts, self.n_verts), dtype=bool)
 
         #compute all the necesary elements for simulation only once
         self.prepareSimulation()
@@ -143,7 +157,7 @@ class Cloth:
         self.prepareMatrices()
         self.computeStretchShear()
         self.precomputeBoundaryBending()
-
+        
     def getPositionsUnity(self, smooth):
         phi_all = self.Am@self.positions
         for _ in range(smooth):
@@ -384,7 +398,7 @@ class Cloth:
         Lb = Lb.tocsc()
 
         # Boundary bending stiffness/operator in same style as interior: Kb = Lb^T Minv Lb
-        self.Kb = (Lb.T @ Minv_b @ Lb).tocsc()    
+        self.Kb = (Lb.T @ Minv_b @ Lb).tocsc()
     
     
     def computeStretchShear(self):
@@ -428,11 +442,11 @@ class Cloth:
            shear_corners = np.zeros((0,4),dtype=int)
 
         #inititate the class    
-        self.stretch = self.Stretch(bars, self.positions, self.n_verts, self.m_sqrt)
-        self.shear = self.Shear(shear_neighs, shear_corners, self.positions, self.n_verts, self.m_sqrt)
+        self.stretch = self.Stretch(bars, self.positions, self.n_verts, self.m_sqrt, self.seams, self.seams_IJK)
+        self.shear = self.Shear(shear_neighs, shear_corners, self.positions, self.n_verts, self.m_sqrt, self.seams, self.seams_IJK)
 
     class Stretch:
-        def __init__(self, bars, X, n_verts, m_sqrt):
+        def __init__(self, bars, X, n_verts, m_sqrt, seams, IJKs):
             self.n_verts = n_verts
             self.bars = bars; 
             self.bars1 = self.bars[:,1]
@@ -442,38 +456,45 @@ class Cloth:
             v1 = bars[:, 0]; v2 = bars[:, 1]
             self.J = np.concatenate([v1,v1 + n_verts, v1 + 2 * n_verts,
                                      v2,v2 + n_verts, v2 + 2 * n_verts])
+            #seams
+            self.seams = seams
+            self.n_seams = seams.shape[0]
+            self.Is = IJKs[0]
+            self.Js = IJKs[1]
+            self.Ks = IJKs[2]
+
             #for the control u
-            self.II = self.I.copy()
-            self.JJ = self.J.copy()
+            self.II = np.concatenate([self.I,self.Is+self.n_conds])
+            self.JJ = np.concatenate([self.J,self.Js])
             self.Ku = []
             #initial condition
             self.val0 = np.zeros((self.n_conds,))
-            self.grad = sp.csc_matrix((np.arange(len(self.II)), (self.II, self.JJ)), 
-                                       shape=(self.n_conds, 3*self.n_verts))
-            self.gradT = sp.csr_matrix((np.arange(len(self.II)), (self.JJ, self.II)), 
-                                       shape=(3*self.n_verts,self.n_conds))
+            self.grad = sp.csc_matrix((np.arange(self.II.shape[0]), (self.II, self.JJ)), 
+                                       shape=(self.n_conds + 3*self.n_seams, 3*self.n_verts))
+            self.gradT = sp.csr_matrix((np.arange(self.II.shape[0]), (self.JJ, self.II)), 
+                                       shape=(3*self.n_verts,self.n_conds + 3*self.n_seams))
             self.order = self.grad.data.astype(np.int64)
             self.orderT = self.gradT.data.astype(np.int64)
             self.m_sqrt = m_sqrt
             self.m_sqrt_JJ = self.m_sqrt[self.JJ]
-            self.val0 = self.evaluate(X,np.zeros((0,)),[])
+            self.val0 = self.evaluate(X,np.zeros((0,)),[])[:self.n_conds]
             self.abs_val0 = np.abs(self.val0)
             self.factor = None
 
         def update_u(self,I,J,K):
             self.Ku = K    
             if len(I) > 0:
-               self.II = np.concatenate([self.I,I+self.n_conds])
-               self.JJ = np.concatenate([self.J,J])  
+               self.II = np.concatenate([self.I,self.Is+self.n_conds,I + self.n_conds + 3*self.n_seams])
+               self.JJ = np.concatenate([self.J,self.Js,J])  
             else:
-               self.II = self.I.copy()  
-               self.JJ = self.J.copy() 
+               self.II = np.concatenate([self.I,self.Is+self.n_conds])
+               self.JJ = np.concatenate([self.J,self.Js])
             self.m_sqrt_JJ = self.m_sqrt[self.JJ]
             self.grad = sp.csc_matrix((np.arange(len(self.II)), (self.II, self.JJ)), 
-                                       shape=(self.n_conds+len(I), 3*self.n_verts))
+                                       shape=(self.n_conds+len(I)+3*self.n_seams, 3*self.n_verts))
             self.order = self.grad.data.astype(np.int64)
             self.gradT = sp.csr_matrix((np.arange(len(self.II)), (self.JJ, self.II)), 
-                                       shape=(3*self.n_verts,self.n_conds+len(I)))
+                                       shape=(3*self.n_verts,self.n_conds+len(I)+3*self.n_seams))
             self.orderT = self.gradT.data.astype(np.int64)
 
         @profile    
@@ -485,18 +506,16 @@ class Cloth:
             if grad:
                 grad1 = 2*(vec).flatten(order='F')
                 grad0 = - grad1
-                K = np.concatenate([grad0,grad1,self.Ku])*self.m_sqrt_JJ + 1e-16
+                K = np.concatenate([grad0,grad1,self.Ks,self.Ku])*self.m_sqrt_JJ + 1e-16
                 self.grad.data = K[self.order]
                 self.gradT.data = K[self.orderT]
-                val_u = phi_mat[control,:].flatten(order='F') - u
-                val = np.concatenate([val_str,val_u])
-            else:
-                val_u = phi_mat[control,:].flatten(order='F') - u
-                val = np.concatenate([val_str,val_u])
+            val_u = phi_mat[control].flatten(order='F') - u
+            val_s = (phi_mat[self.seams[:,0]]-phi_mat[self.seams[:,1]]).flatten(order='F')
+            val = np.concatenate([val_str,val_s,val_u])
             return val
 
     class Shear:
-        def __init__(self, shear_neighs, shear_corners, X, n_verts, m_sqrt):
+        def __init__(self, shear_neighs, shear_corners, X, n_verts, m_sqrt, seams, IJKs):
             self.n_verts = n_verts
             self.n_crn = shear_corners.shape[0]
             self.n_conds = shear_neighs.shape[0] + shear_corners.shape[0]
@@ -524,38 +543,45 @@ class Cloth:
             self.neighs2 = self.neighs[:,2]
             self.neighs3 = self.neighs[:,3]
 
+            #seams
+            self.seams = seams
+            self.n_seams = seams.shape[0]
+            self.Is = IJKs[0]
+            self.Js = IJKs[1]
+            self.Ks = IJKs[2]
+
             #for the control u
-            self.II = self.I.copy()
-            self.JJ = self.J.copy()
+            self.II = np.concatenate([self.I,self.Is+self.n_conds])
+            self.JJ = np.concatenate([self.J,self.Js])
             self.Ku = []
             #initial condition
             self.val0 = np.zeros((self.n_conds,))
             self.grad = sp.csc_matrix((np.arange(len(self.II)), (self.II, self.JJ)), 
-                                      shape=(self.n_conds, 3*self.n_verts))
+                                      shape=(self.n_conds+3*self.n_seams, 3*self.n_verts))
             self.order = self.grad.data.astype(np.int64)
             self.gradT = sp.csr_matrix((np.arange(len(self.II)), (self.JJ, self.II)), 
-                                      shape=(3*self.n_verts,self.n_conds))
+                                      shape=(3*self.n_verts,self.n_conds+3*self.n_seams))
             self.orderT = self.gradT.data.astype(np.int64)
             self.m_sqrt = m_sqrt
             self.m_sqrt_JJ = self.m_sqrt[self.JJ]
-            self.val0 = self.evaluate(X,np.zeros((0,)),[])
+            self.val0 = self.evaluate(X,np.zeros((0,)),[])[:self.n_conds]
             self.abs_val0 = np.abs(self.val0)
             self.factor = None
 
         def update_u(self,I,J,K):
             self.Ku = K    
             if len(I) > 0:
-               self.II = np.concatenate([self.I,I+self.n_conds])
-               self.JJ = np.concatenate([self.J,J])  
+               self.II = np.concatenate([self.I,self.Is+self.n_conds,I + self.n_conds + 3*self.n_seams])
+               self.JJ = np.concatenate([self.J,self.Js,J])  
             else:
-               self.II = self.I.copy()  
-               self.JJ = self.J.copy()         
-            self.m_sqrt_JJ = self.m_sqrt[self.JJ]  
+               self.II = np.concatenate([self.I,self.Is+self.n_conds])
+               self.JJ = np.concatenate([self.J,self.Js])
+            self.m_sqrt_JJ = self.m_sqrt[self.JJ]
             self.grad = sp.csc_matrix((np.arange(len(self.II)), (self.II, self.JJ)), 
-                                      shape=(self.n_conds+len(I), 3*self.n_verts))
+                                       shape=(self.n_conds+len(I)+3*self.n_seams, 3*self.n_verts))
             self.order = self.grad.data.astype(np.int64)
             self.gradT = sp.csr_matrix((np.arange(len(self.II)), (self.JJ, self.II)), 
-                                      shape=(3*self.n_verts,self.n_conds+len(I)))
+                                       shape=(3*self.n_verts,self.n_conds+len(I)+3*self.n_seams))
             self.orderT = self.gradT.data.astype(np.int64)
 
         @profile
@@ -583,14 +609,12 @@ class Cloth:
                     _grad0 = []; _grad1 = []; _grad2 = []
 
                 K = np.concatenate([grad0,grad1,grad2,grad3,
-                                   _grad0,_grad1,_grad2,self.Ku])*self.m_sqrt_JJ + 1e-16  
+                                   _grad0,_grad1,_grad2,self.Ks,self.Ku])*self.m_sqrt_JJ + 1e-16  
                 self.grad.data = K[self.order]
                 self.gradT.data = K[self.orderT]
-                val_u = phi_mat[control,:].flatten(order='F') - u
-                val = np.concatenate([val_shr,val_u])
-            else:
-                val_u = phi_mat[control,:].flatten(order='F') - u
-                val = np.concatenate([val_shr,val_u])
+            val_u = phi_mat[control,:].flatten(order='F') - u
+            val_s = (phi_mat[self.seams[:,0]]-phi_mat[self.seams[:,1]]).flatten(order='F')
+            val = np.concatenate([val_shr,val_s,val_u])
             return val
         
     def estimateTimeStep(self,L=1):
@@ -712,12 +736,16 @@ class Cloth:
         self.matrix_rads = matrix_rads
 
  
-    def setSimulatorParameters(self, dt = 1/480, tol = 0.0075, 
+    def setSimulatorParameters(self, dt = 1/60, tol = 0.0075, sub_steps = 10,
                                rho = 0.1, delta = 0.1, alpha = 0.2,
-                               kappa = 2.5*1e-4, kappa_bnd = 0.25*1e-4, str = 0, shr = 25*1e-4,
-                               mu_f = 0.2, mu_s = 0.25, thck = 1.2, numIterSmooth = 4):
+                               kappa = 0.5*1e-4, kappa_bnd = 0.05*1e-4, 
+                               str = 0.01*1e-4, shr = 10*1e-4,
+                               mu_f = 0.2, mu_s = 0.35, thck = 0.95):
         #solver parameters
-        self.dt = dt #time step
+        self.frame_rate = dt #desired frame rate
+        self.sub_steps = sub_steps
+        self.dt = dt/self.sub_steps #time step
+        self.t_int = np.linspace(1/self.sub_steps,1,self.sub_steps) #for interpolating the controls when substepping
         self.tol = tol #tolerance for constraints
         self.implicitEuler = False
 
@@ -727,24 +755,23 @@ class Cloth:
         self.delta = delta # virtual mass 
         self.alpha = alpha # slow damping 
         self.kappa = kappa # bending stiffness
-        self.kappa_bnd = kappa_bnd # bending stiffness for the boundary
-        self.beta = 0.015*self.kappa # fast damping: do not change in general
-        self.str = str/(dt**2) # stretch elasticity
-        self.shr = shr/(dt**2) # shear elasticity
+        self.kappa_bnd = kappa_bnd # bending stiffness
+        self.beta = 0.02*self.kappa # fast damping: do not change in general
+        self.str = str/(self.dt**2) # stretch elasticity
+        self.shr = shr/(self.dt**2) # shear elasticity
         self.mu_floor = mu_f #friction with to the floor
         self.mu_self = mu_s #friction for self-collisions
 
         #self-collision parameters
         self.thck = thck
-        self.mov_tol = 0.02 #when some node moves 2% or more than its previous position, run computeClosePairs()
+        self.mov_tol = 0.025 #when some node moves 2.5% or more than its previous position, run computeClosePairs()
         self.computeRadiouses()
         self.eps_sus = 3.3*self.rad #threshold for detecting close balls in computeClosePairs()
 
 
         #factorize implicit step matrix E for fast unconstrained step
         D = self.alpha*self.M + self.beta*self.K 
-        K = self.kappa*self.K + self.kappa_bnd*self.Kb; 
-        M = self.rho*self.M; 
+        K = self.kappa*self.K + self.kappa_bnd*self.Kb; M = self.rho*self.M; 
         E = M + self.dt*D + (self.dt**2)*K 
         Et = M + 0.5*self.dt*D + 0.25*(self.dt**2)*K 
 
@@ -757,11 +784,11 @@ class Cloth:
         self.rho_M = M      
         dt_rho_M = (self.dt*self.rho_M).diagonal()
         self.dt_rho_M = dt_rho_M[:, np.newaxis]
-        self.dt2_delta_Fg = (dt**2)*self.delta*self.g*self.Fg
-        self.half_dt2_delta_Fg = 0.5*(dt**2)*self.delta*self.g*self.Fg  
+        self.dt2_delta_Fg = (self.dt**2)*self.delta*self.g*self.Fg
+        self.half_dt2_delta_Fg = 0.5*(self.dt**2)*self.delta*self.g*self.Fg  
 
         #aerodynamics    
-        self.half_dt2_Fg = 0.5*(dt**2)*self.g*self.Fg
+        self.half_dt2_Fg = 0.5*(self.dt**2)*self.g*self.Fg
         self.F_z = self.half_dt2_Fg[:,2].toarray().flatten(order='F')
         self.rho_M_plus_dt_D = (self.rho_M + self.dt*self.D).tocsr()
         self.E_aux = (self.rho_M + 0.5*self.dt*self.D - 0.25*(self.dt**2)*K).tocsr()
@@ -859,7 +886,7 @@ class Cloth:
         #mass inverses: set controled to zero
         w = self.m_inv.copy(); w[self.control] = 0
         wa  = (avg*w)[:,np.newaxis]      
-        rads = self.rads[self.ind_slf]       
+        rads = self.rads[self.ind_slf]      
 
         #initial impulses
         num = -self.vals_slf[self.ind_slf]; 
@@ -919,11 +946,54 @@ class Cloth:
         return phi
     
     def buildShareEdgeMatrix(self):
-        share_edge = np.zeros((self.n_verts, self.n_verts), dtype=bool)
-        for edge in self.edges_matrix:  # each edge has 2 nodes
-            a,b = edge
-            share_edge[a, b] = True
-            share_edge[b, a] = True
+        n = self.n_verts
+        # --- Union-Find over seam equivalences ---
+        parent = np.arange(n, dtype=int)
+        rank = np.zeros(n, dtype=int)
+
+        def find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra == rb:
+                return
+            if rank[ra] < rank[rb]:
+                parent[ra] = rb
+            elif rank[ra] > rank[rb]:
+                parent[rb] = ra
+            else:
+                parent[rb] = ra
+                rank[ra] += 1
+
+        for a, b in self.seams:
+            union(a, b)
+
+        reps = np.array([find(i) for i in range(n)], dtype=int)
+
+        # group members by representative
+        groups = {}
+        for idx, r in enumerate(reps):
+            groups.setdefault(r, []).append(idx)
+
+        share_edge = np.zeros((n, n), dtype=bool)
+
+        # --- (1) clique within each equivalence class ---
+        for members in groups.values():
+            if len(members) > 1:
+                m = np.array(members, dtype=int)
+                share_edge[np.ix_(m, m)] = True
+
+        # --- (2) lift real edges across equivalence classes ---
+        for u, v in self.edges_matrix:
+            gu = np.array(groups[reps[u]], dtype=int)
+            gv = np.array(groups[reps[v]], dtype=int)
+            share_edge[np.ix_(gu, gv)] = True
+            share_edge[np.ix_(gv, gu)] = True
+
         self.share_edge = share_edge
     
     @profile
@@ -942,6 +1012,9 @@ class Cloth:
         #second mask
         mask2 = ~self.share_edge[ni,nj]
         ni = ni[mask2]; nj = nj[mask2]
+        #third mask
+        mask3 = ~self.share_control[ni,nj]
+        ni = ni[mask3]; nj = nj[mask3]
         #set radiouses to avoid jitering when the balls are too big
         self.rads = self.matrix_rads[ni,nj]
         #potential colliding nodes-nodes
@@ -955,7 +1028,7 @@ class Cloth:
         #check close pairs
         diff = phi_mat - self.last_check
         mov = np.sqrt(np.max(self.innerProduct(diff, diff)/self.den_last))
-        if (mov > self.mov_tol) or (self.total_iters == 0): #only check when at least 1 node has moved more than mov_eps
+        if (mov > self.mov_tol) or (self.total_iters == 0) or self.update_chol: #only check when at least 1 node has moved more than mov_eps
             self.computeClosePairs(phi_mat) #update close pairs
             self.last_check = phi_mat #update last checked mesh
             self.den_last = self.innerProduct(self.last_check,self.last_check)
@@ -981,11 +1054,11 @@ class Cloth:
         return phi 
 
     @profile
-    def projectConstraints(self,constraints,phi,u,control,landa,par,update_chol,den_error,n):
+    def projectConstraints(self,constraints,phi,u,control,landa,par,den_error,n):
         #evaluate constraints
         if n == 0:
             val = constraints.evaluate(phi,u,control,grad=True)
-            if update_chol or constraints.factor is None:
+            if self.update_chol or constraints.factor is None:
                constraints.factor = cholesky_AAt(constraints.grad, beta = par) 
             else:
                constraints.factor.cholesky_AAt_inplace(constraints.grad, beta = par)
@@ -1000,10 +1073,7 @@ class Cloth:
 
         #check errors 
         val = constraints.evaluate(phi,u,control,grad=False)
-        if u.shape[0] > 0:
-           aux_error = (val[:-u.shape[0]] + par*landa[:-u.shape[0]])/(constraints.abs_val0 + den_error)
-        else:
-           aux_error = (val + par*landa)/(constraints.abs_val0 + den_error)
+        aux_error = (val[:constraints.n_conds] + par*landa[:constraints.n_conds])/(constraints.abs_val0 + den_error)
         error = np.linalg.norm(aux_error,ord=np.inf) 
 
         return phi, landa, error
@@ -1027,22 +1097,25 @@ class Cloth:
         return self.TrapezoidalRule()
     
     def processControlInputs(self,u,control):
-        u = np.array(u)
-        control = control.tolist()
         n_ctr = len(control)
         if n_ctr > 0:
-           u_mat = u.reshape((n_ctr,3))
-           u = u_mat.reshape((3*n_ctr,),order='F')
-           u_mat[:,2] = np.maximum(0,u_mat[:,2])
+           u[:,2] = np.maximum(0,u[:,2])
+           u = u.reshape((3*n_ctr,),order='F')
+           pos0 = self.positions[control].flatten(order='F')
+           U = []
+           for s in range(self.sub_steps):
+               U.append(pos0 + self.t_int[s]*(u - pos0))
         else:
            u = np.zeros((0,))
-           u_mat = np.zeros((0,3))
+           U = [u]*self.sub_steps
         #check if we need to update cholesky decomp. of constraints
-        update_chol = False
+        self.update_chol = False
         if self.control != control:
             #update internal variables
             self.control = control
-            update_chol = True
+            self.update_chol = True
+            self.share_control[:] = False
+            self.share_control[np.ix_(control, control)] = True
             if n_ctr > 0:
                 Iu = np.arange(3*n_ctr)
                 Ju = np.concatenate((control, [x+self.n_verts for x in control], [x+2*self.n_verts for x in control]))
@@ -1051,8 +1124,8 @@ class Cloth:
                 Iu = self.empty; Ju = self.empty; Ku = self.empty
             self.shear.update_u(Iu,Ju,Ku)
             self.stretch.update_u(Iu,Ju,Ku)
-        return u, u_mat, n_ctr, update_chol
-
+        return U
+    
     def fromAddressToArray(self, address, length, tp):
         pointer_type = ctypes.POINTER(tp)
 
@@ -1063,59 +1136,65 @@ class Cloth:
 
     @profile
     def simulate(self, u, control, l):
-
         u = self.fromAddressToArray(u, l*3, ctypes.c_float)
         control = self.fromAddressToArray(control, l, ctypes.c_int32)
 
-        #current position of the cloth for self-collisions
-        phi0 = self.positions.reshape((3*self.n_verts,),order = 'F')
-
         #process the control inputs
-        u, u_mat, n_ctr, update_chol = self.processControlInputs(u,control)
+        U = self.processControlInputs(u,control)
 
-        #unconstrained step to correct
-        phi = self.unconstrainedStep(self.implicitEuler)
+        #substepping
+        n_iter_sub = 0
+        for s in range(self.sub_steps):
 
-        #lagrange multipliers for the shear and stretch constraints
-        lambda_shr = np.zeros((self.shear.n_conds + u.shape[0],)); 
-        lambda_str = np.zeros((self.stretch.n_conds + u.shape[0],)); 
+            #current position of the cloth 
+            phi0 = self.positions.reshape((3*self.n_verts,),order = 'F')
 
-        #solver variables for inextensiblity 
-        n_iter = 0; error_str = np.inf; error_shr = np.inf; self.error_slf = -np.inf
+            #interpolated control
+            u = U[s]; #u_mat = u.reshape((n_ctr,3),order='F')
 
-        while (error_str > self.tol or error_shr > self.tol) and n_iter < 100: #or self.error_slf < -self.tol:
+            #unconstrained step to correct
+            phi = self.unconstrainedStep(self.implicitEuler)
 
-            #shearing
-            phi, lambda_shr, error_shr = self.projectConstraints(self.shear,phi,u,control,
-                                                                lambda_shr,self.shr,
-                                                                update_chol,0.01,n_iter%3)
+            #lagrange multipliers for the shear and stretch constraints
+            lambda_shr = np.zeros((self.shear.n_conds + u.shape[0] + 3*self.n_seams,)); 
+            lambda_str = np.zeros((self.stretch.n_conds + u.shape[0] + 3*self.n_seams,)); 
 
-            #stretching
-            phi, lambda_str, error_str = self.projectConstraints(self.stretch,phi,u,control,
-                                                                lambda_str,self.str,
-                                                                update_chol,0,0)    
- 
-            #control constraints
-            #phi = self.projectControl(phi,u_mat,control,n_ctr)
+            #solver variables for inextensiblity 
+            n_iter = 0; error_str = np.inf; error_shr = np.inf; 
 
-            #self-collisions
-            phi = self.selfCollisions(phi,n_iter); 
+            while (error_str > self.tol or error_shr > self.tol) and n_iter < 100: 
 
-            #iteration count 
-            n_iter += 1
+                #shearing
+                phi, lambda_shr, error_shr = self.projectConstraints(self.shear,phi,u,control,
+                                                                    lambda_shr,self.shr,0.005,s%5)
 
-        #floor collisions
-        phi = self.floorCollisions(phi)
+                #stretching
+                phi, lambda_str, error_str = self.projectConstraints(self.stretch,phi,u,control,
+                                                                    lambda_str,self.str,0,0)   
+                
+                #self-collisions
+                phi = self.selfCollisions(phi,n_iter); 
 
-        #update internal cloth variables
-        dphi = (phi-phi0)/self.dt
-        self.positions = phi.reshape((self.n_verts, 3), order='F')
-        self.velocities = dphi.reshape((self.n_verts, 3), order='F')
+                #iteration count 
+                n_iter += 1
+            #print(n_iter)
+
+            #floor collisions
+            phi = self.floorCollisions(phi)
+
+            #update internal cloth variables
+            dphi = (phi-phi0)/self.dt
+            self.positions = phi.reshape((self.n_verts, 3), order='F')
+            self.velocities = dphi.reshape((self.n_verts, 3), order='F')
+            n_iter_sub += n_iter
+
+        #save final positions and velocities
         self.history_pos.append(self.positions)
         self.history_vel.append(self.velocities)
-        self.total_iters += n_iter
+        self.total_iters += n_iter_sub/self.sub_steps
 
         #warnings
         if self.total_iters/(len(self.history_pos)-1) > 4 and self.warning == False:
-           print("WARNING: average of more than 4 iterations taken, for better performance reduce dt")
+           print("WARNING: average of more than 4 iterations taken, for better performance reduce dt or increase thck")
            self.warning = True
+

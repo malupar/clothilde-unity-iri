@@ -7,7 +7,7 @@ public class BoxGripper : MonoBehaviour
     public TriangleMesh cloth;
 
     [Header("Box dimensions in local coordinates")]
-    public Vector3 boxSize = new Vector3(0.1f, 0.1f, 0.1f);
+    public Vector3 boxSize = new Vector3(0.05f, 0.05f, 0.05f);
 
     public bool enableKeyboardTranslation = true;
     public bool enableKeyboardRotation = true;

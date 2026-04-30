@@ -77,8 +77,22 @@ public class PythonConnection : MonoBehaviour
                 meshPython = clothModule.Cloth(mesh.getMeshPositions(), mesh.getFaces());
                 Debug.Log(meshPython);
 
-                meshPython.setSimulatorParameters(dt: mesh.dt/mesh.numIter, 
-                                                  numIterSmooth: mesh.numIter, 
+                // meshPython.setSimulatorParameters(dt: mesh.dt/mesh.numIter, 
+                //                                   numIterSmooth: mesh.numIter, 
+                //                                   mu_s: mesh.mu_s, 
+                //                                   mu_f: mesh.mu_f, 
+                //                                   thck: mesh.thck, 
+                //                                   tol: mesh.tol, 
+                //                                   rho: mesh.rho, 
+                //                                   delta: mesh.delta, 
+                //                                   kappa: mesh.kappa, 
+                //                                   kappa_bnd: mesh.kappa_bnd, 
+                //                                   alpha: mesh.alpha, 
+                //                                   shr: mesh.shr, 
+                //                                   str: mesh.str);
+
+                meshPython.setSimulatorParameters(dt: mesh.dt,
+                                                  sub_steps: mesh.sub_steps,
                                                   mu_s: mesh.mu_s, 
                                                   mu_f: mesh.mu_f, 
                                                   thck: mesh.thck, 

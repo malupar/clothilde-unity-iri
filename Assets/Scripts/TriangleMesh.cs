@@ -19,7 +19,8 @@ public class TriangleMesh : MonoBehaviour
     public bool allHandles = true;
 
     //Runtime modifiable parameters
-    public int numIter = 2;
+    public int sub_steps = 8;
+    // public int numIter = 2;
     public float dt = 1f/60f;
     public float tol = 0.008f;
     public float rho = 0.1f;
@@ -488,9 +489,9 @@ public class TriangleMesh : MonoBehaviour
             positions.Add(V3ToArray(x.Value));
         }
 
-        // UPDATED: 
+// UPDATED: 
 // Old version: Used visual mesh position at the start (meshUnity.vertices[nodeIndex]) to new target;
-// this created problems since at every iteration, new position may not be the same as the visual one.
+// This created problems since at every iteration, new position may not be the same as the visual one.
 // New version: Interpolates previous commanded target to new target.
 
         int[] control = controlNodes.ToArray();
@@ -500,36 +501,37 @@ public class TriangleMesh : MonoBehaviour
         GCHandle cHandle = GCHandle.Alloc(control, GCHandleType.Pinned);
         long cPtr = (long)cHandle.AddrOfPinnedObject();
 
+        // for (int i = 0; i < nums; ++i)
+        // {
+        //     int nodeIndex = control[i];
+
+        //     if (!previousControlTargets.ContainsKey(nodeIndex))
+        //     {
+        //         previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
+        //     }
+        // }
+
+        // for (int it = 0; it < numIter; ++it)
+        // {
         for (int i = 0; i < nums; ++i)
         {
             int nodeIndex = control[i];
 
-            if (!previousControlTargets.ContainsKey(nodeIndex))
+            // Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
+            // Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
+
+            // // Python style
+            // float[] p = V3ToArray(startWorld);
+            // float[] target = V3ToArray(targetWorld);
+
+            // float s = (float)(it + 1) / numIter;
+
+            for (int j = 0; j < 3; ++j)
             {
-                previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
+                // pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
+                pos[i * 3 + j] = positions[i][j];
             }
-        }
-
-        for (int it = 0; it < numIter; ++it)
-        {
-            for (int i = 0; i < nums; ++i)
-            {
-                int nodeIndex = control[i];
-
-                Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
-                Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
-
-                // Python style
-                float[] p = V3ToArray(startWorld);
-                float[] target = V3ToArray(targetWorld);
-
-                float s = (float)(it + 1) / numIter;
-
-                for (int j = 0; j < 3; ++j)
-                {
-                    pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
-                }
-            }
+            // }
 
             GCHandle vHandle = GCHandle.Alloc(pos, GCHandleType.Pinned);
             long vPtr = (long)vHandle.AddrOfPinnedObject();
