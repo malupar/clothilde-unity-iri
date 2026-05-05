@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Valve.VR;
 
-public class BoxGripper : MonoBehaviour
+public class BoxGripperVR : MonoBehaviour
 {
     [Header("Cloth")]
     public TriangleMesh cloth;
@@ -20,16 +20,25 @@ public class BoxGripper : MonoBehaviour
     private List<int> graspedNodes = new List<int>();
     private Dictionary<int, Vector3> localNodeOffsets = new Dictionary<int, Vector3>();
 
+    public SteamVR_Action_Boolean m_GrabAction = null;
+    public SteamVR_Action_Single squeezeAction;
+
     public bool isLeft = true;
+
+    private SteamVR_Behaviour_Pose m_Pose = null;
+    private FixedJoint m_Joint = null;
 
     // To set the scale same as the box size for visualization
     void Awake()
     {
-        transform.transform.localScale = boxSize;
-        transform.position = new Vector3(0, 1, 0);
+        transform.GetChild(2).transform.localScale = boxSize;
+        //transform.position = new Vector3(0, 1, 0);
+        m_Pose = GetComponent<SteamVR_Behaviour_Pose>();
+        m_Joint = GetComponent<FixedJoint>();
     }
     void Update()
     {
+        //Debug.Log("Bola: " + transform.GetChild(1).transform.position);
         if (enableKeyboardTranslation)
         {
             TranslateBoxWithKeyboard();
@@ -38,7 +47,7 @@ public class BoxGripper : MonoBehaviour
         {
             RotateBoxWithKeyboard();
         }
-        if (Input.GetKeyDown(KeyCode.G))
+        if (Input.GetKeyDown(KeyCode.G) || m_GrabAction.GetStateDown(m_Pose.inputSource))
         {
             if (!isGrasping)
             {
@@ -48,7 +57,7 @@ public class BoxGripper : MonoBehaviour
                 
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) || m_GrabAction.GetStateUp(m_Pose.inputSource))
         {
             Debug.Log("R pressed: releasing nodes");
             ReleaseNodes();
@@ -93,7 +102,7 @@ public class BoxGripper : MonoBehaviour
         }
          if (motion.sqrMagnitude > 0.0f)
         {
-           transform.position += motion.normalized * translationSpeed * Time.deltaTime;
+           // transform.position += motion.normalized * translationSpeed * Time.deltaTime;
         }
 
     }
@@ -139,7 +148,7 @@ public class BoxGripper : MonoBehaviour
     bool IsInsideBox(Vector3 worldPoint)
     {
         //Vector3 localPoint = transform.GetChild(2).InverseTransformPoint(worldPoint);
-        Vector3 localPoint = worldPoint - transform.position;
+        Vector3 localPoint = worldPoint - transform.GetChild(2).position;
         Matrix4x4 rotationMatrix = Matrix4x4.Rotate(transform.rotation);
         localPoint = rotationMatrix.MultiplyPoint3x4(localPoint);
 
