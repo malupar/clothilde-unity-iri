@@ -1099,12 +1099,11 @@ class Cloth:
     def processControlInputs(self,u,control):
         control = control.tolist()
         n_ctr = len(control)
+        control = control.tolist()
         if n_ctr > 0:
-           u = u.reshape((n_ctr,3))
-           u[:,2] = np.maximum(0,u[:,2])
-           u = u.reshape((3*n_ctr,),order='F')
-        #    u[:,2] = np.maximum(0,u[:,2])
-        #    u = u.reshape((3*n_ctr,),order='F')
+           u_mat = u.reshape((n_ctr, 3))
+           u_mat[:,2] = np.maximum(0, u_mat[:,2])
+           u = u_mat.reshape((3*n_ctr,),order='F')
            pos0 = self.positions[control].flatten(order='F')
            U = []
            for s in range(self.sub_steps):

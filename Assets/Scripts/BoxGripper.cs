@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Valve.VR;
 
 public class BoxGripper : MonoBehaviour
 {
@@ -7,7 +8,7 @@ public class BoxGripper : MonoBehaviour
     public TriangleMesh cloth;
 
     [Header("Box dimensions in local coordinates")]
-    public Vector3 boxSize = new Vector3(0.05f, 0.05f, 0.05f);
+    public Vector3 boxSize = new Vector3(0.1f, 0.1f, 0.1f);
 
     [Header("Keyboard control")]
     public bool enableKeyboardTranslation = true;
@@ -34,7 +35,7 @@ public class BoxGripper : MonoBehaviour
     // To set the scale same as the box size for visualization
     void Awake()
     {
-        transform.localScale = boxSize;
+        transform.transform.localScale = boxSize;
         transform.position = new Vector3(0, 1, 0);
     }
     void Update()
@@ -102,7 +103,7 @@ public class BoxGripper : MonoBehaviour
         }
          if (motion.sqrMagnitude > 0.0f)
         {
-            transform.position += motion.normalized * translationSpeed * Time.deltaTime;
+           transform.position += motion.normalized * translationSpeed * Time.deltaTime;
         }
 
     }
@@ -147,14 +148,17 @@ public class BoxGripper : MonoBehaviour
 
     bool IsInsideBox(Vector3 worldPoint)
     {
-        Vector3 localPoint = transform.InverseTransformPoint(worldPoint);
+        //Vector3 localPoint = transform.GetChild(2).InverseTransformPoint(worldPoint);
+        Vector3 localPoint = worldPoint - transform.position;
+        Matrix4x4 rotationMatrix = Matrix4x4.Rotate(transform.rotation);
+        localPoint = rotationMatrix.MultiplyPoint3x4(localPoint);
 
         Vector3 halfSize = 0.5f * boxSize;
         // divide by boxsize because the scale affects the 
-        // InverseTransformPouint function
-        return  Mathf.Abs(localPoint.x) <= halfSize.x / boxSize.x &&
-                Mathf.Abs(localPoint.y) <= halfSize.y / boxSize.y &&
-                Mathf.Abs(localPoint.z) <= halfSize.z / boxSize.z;
+        // InverseTransformPoint function
+        return  Mathf.Abs(localPoint.x) <= halfSize.x  &&
+                Mathf.Abs(localPoint.y) <= halfSize.y  &&
+                Mathf.Abs(localPoint.z) <= halfSize.z;
 
     }
     void GraspNodesInsideBox()

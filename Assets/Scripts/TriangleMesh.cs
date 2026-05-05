@@ -88,7 +88,7 @@ public class TriangleMesh : MonoBehaviour
             return transform.position;
         }
 
-        return transform.TransformPoint(meshUnity.vertices[nodeIndex]);
+        return meshUnity.vertices[nodeIndex];
     }
 
     // Logic to grasp nodes inside the grasp box
@@ -499,14 +499,15 @@ public class TriangleMesh : MonoBehaviour
         long cPtr = (long)cHandle.AddrOfPinnedObject();
 
         for (int i = 0; i < nums; ++i)
-        {
-            int nodeIndex = control[i];
+         {
+             int nodeIndex = control[i];
 
-            if (!previousControlTargets.ContainsKey(nodeIndex))
-            {
-                previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
-            }
+             if (!previousControlTargets.ContainsKey(nodeIndex))
+             {
+                 previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
+             }
         }
+
 
         for (int it = 0; it < numIter; ++it)
         {
@@ -517,7 +518,7 @@ public class TriangleMesh : MonoBehaviour
             Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
             Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
 
-            // Python style
+            // // Python style
             float[] p = V3ToArray(startWorld);
             float[] target = V3ToArray(targetWorld);
 
