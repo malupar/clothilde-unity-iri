@@ -9,15 +9,27 @@ public class BoxGripper : MonoBehaviour
     [Header("Box dimensions in local coordinates")]
     public Vector3 boxSize = new Vector3(0.05f, 0.05f, 0.05f);
 
+    [Header("Keyboard control")]
     public bool enableKeyboardTranslation = true;
     public bool enableKeyboardRotation = true;
-
     public float translationSpeed = 0.1f;
     public float rotationSpeed = 50.0f;
+
+    [Header("Squeeze")]
+    public bool enableSqueeze = true;
+    public float squeezeAmount = 0.5f; // 0.5 = move halfway toward box center
+    public float squeezeAlphaStep = 0.1f; // same logic as in Gripper.py: 0.1, 0.2, 0.3, ..., 1.0
+    private float squeezeAlpha = 1.0f;
+    // Current local target for each grasped node
+    private Dictionary<int, Vector3> localNodeGoalOffsets = new Dictionary<int, Vector3>();
+    // Initial unsqueezed local position
+    private Dictionary<int, Vector3> localNodeRestOffsets = new Dictionary<int, Vector3>();
+
 
     private bool isGrasping = false;
     private List<int> graspedNodes = new List<int>();
     private Dictionary<int, Vector3> localNodeOffsets = new Dictionary<int, Vector3>();
+
 
     // To set the scale same as the box size for visualization
     void Awake()
@@ -192,15 +204,30 @@ public class BoxGripper : MonoBehaviour
         {
             Vector3 nodeWorldPosition = cloth.GetNodeWorldPosition(nodeIndex);
 
-            // Convert node position from world frame to box local frame
-            Vector3 nodeLocalPosition = transform.InverseTransformPoint(nodeWorldPosition);
-                
+        // SQUEEZE:
+            // Store the node in the gripper local frame at the moment of grasp.
+            Vector3 restLocal = transform.InverseTransformPoint(nodeWorldPosition);
+
+            Vector3 goalLocal = restLocal;
+            if (enableSqueeze)
+            {
+                // box center is x = 0 in local frame
+                float dx = 0.0f - goalLocal.x;
+                goalLocal.x += squeezeAmount * dx;
+            }
+
             graspedNodes.Add(nodeIndex);
+
             // need this to send offsets for control in the next function
-            localNodeOffsets[nodeIndex] = nodeLocalPosition;
+            localNodeRestOffsets[nodeIndex] = restLocal;
+            localNodeGoalOffsets[nodeIndex] = goalLocal;
+
+            // Start from the unsqueezed position.
+            localNodeOffsets[nodeIndex] = restLocal;
 
         }
 
+        squeezeAlpha = 0.0f;
         isGrasping = graspedNodes.Count > 0;
 
         Debug.Log("Grasped nodes: " + graspedNodes.Count);
@@ -208,10 +235,21 @@ public class BoxGripper : MonoBehaviour
 
     void UpdateGraspedNodePositions()
     {
+        if (squeezeAlpha < 1.0f)
+        {
+            squeezeAlpha = Mathf.Min(1.0f, squeezeAlpha + squeezeAlphaStep);
+        }
+        float a = squeezeAlpha;
+
         foreach (int nodeIndex in graspedNodes)
         {
-            // read the offsets already stored
-            Vector3 localOffset = localNodeOffsets[nodeIndex];
+            Vector3 restLocal = localNodeRestOffsets[nodeIndex];
+            Vector3 goalLocal = localNodeGoalOffsets[nodeIndex];
+            // Python style:
+            // local_points = (1-a) * rest + a * goal
+            Vector3 localOffset = (1.0f - a) * restLocal + a * goalLocal;
+
+            localNodeOffsets[nodeIndex] = localOffset;
 
             // Convert the saved local offset back to world frame
             Vector3 newWorldPosition = transform.TransformPoint(localOffset);
