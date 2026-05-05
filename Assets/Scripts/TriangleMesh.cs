@@ -20,7 +20,7 @@ public class TriangleMesh : MonoBehaviour
 
     //Runtime modifiable parameters
     public int sub_steps = 8;
-    // public int numIter = 2;
+    public int numIter = 1;
     public float dt = 1f/60f;
     public float tol = 0.008f;
     public float rho = 0.1f;
@@ -168,9 +168,6 @@ public class TriangleMesh : MonoBehaviour
 
         return candidates;
     }
-
-
-
 
     // getEdges: inspired by getFaces method
     public int[,] getEdges()
@@ -501,37 +498,37 @@ public class TriangleMesh : MonoBehaviour
         GCHandle cHandle = GCHandle.Alloc(control, GCHandleType.Pinned);
         long cPtr = (long)cHandle.AddrOfPinnedObject();
 
-        // for (int i = 0; i < nums; ++i)
-        // {
-        //     int nodeIndex = control[i];
-
-        //     if (!previousControlTargets.ContainsKey(nodeIndex))
-        //     {
-        //         previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
-        //     }
-        // }
-
-        // for (int it = 0; it < numIter; ++it)
-        // {
         for (int i = 0; i < nums; ++i)
         {
             int nodeIndex = control[i];
 
-            // Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
-            // Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
+            if (!previousControlTargets.ContainsKey(nodeIndex))
+            {
+                previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
+            }
+        }
 
-            // // Python style
-            // float[] p = V3ToArray(startWorld);
-            // float[] target = V3ToArray(targetWorld);
+        for (int it = 0; it < numIter; ++it)
+        {
+        for (int i = 0; i < nums; ++i)
+        {
+            int nodeIndex = control[i];
 
-            // float s = (float)(it + 1) / numIter;
+            Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
+            Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
+
+            // Python style
+            float[] p = V3ToArray(startWorld);
+            float[] target = V3ToArray(targetWorld);
+
+            float s = (float)(it + 1) / numIter;
 
             for (int j = 0; j < 3; ++j)
             {
-                // pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
-                pos[i * 3 + j] = positions[i][j];
+                pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
+                // pos[i * 3 + j] = positions[i][j];
             }
-            // }
+            }
 
             GCHandle vHandle = GCHandle.Alloc(pos, GCHandleType.Pinned);
             long vPtr = (long)vHandle.AddrOfPinnedObject();
