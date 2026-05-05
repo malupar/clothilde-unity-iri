@@ -347,6 +347,7 @@ MonoBehaviour:
   originPosition: {x: 0, y: 0, z: 0}
   doubleSided: 1
   allHandles: 1
+  sub_steps: 8
   numIter: 8
   dt: 0.016666668
   tol: 0.005
@@ -565,6 +566,13 @@ MonoBehaviour:
   enableKeyboardRotation: 1
   translationSpeed: 0.1
   rotationSpeed: 50
+  m_GrabAction:
+    actionPath: /actions/default/in/GrabPinch
+    needsReinit: 0
+  squeezeAction:
+    actionPath: /actions/default/in/Squeeze
+    needsReinit: 0
+  isLeft: 1
 --- !u!65 &1811006413
 BoxCollider:
   m_ObjectHideFlags: 0

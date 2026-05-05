@@ -91,7 +91,8 @@ public class PythonConnection : MonoBehaviour
                 //                                   shr: mesh.shr, 
                 //                                   str: mesh.str);
 
-                meshPython.setSimulatorParameters(dt: mesh.dt,
+                meshPython.setSimulatorParameters(dt: mesh.dt/mesh.numIter,
+                                                //numIterSmooth: mesh.numIter,
                                                   sub_steps: mesh.sub_steps,
                                                   mu_s: mesh.mu_s, 
                                                   mu_f: mesh.mu_f, 

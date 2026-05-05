@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Valve.VR;
 
 public class BoxGripper : MonoBehaviour
 {
@@ -7,7 +8,7 @@ public class BoxGripper : MonoBehaviour
     public TriangleMesh cloth;
 
     [Header("Box dimensions in local coordinates")]
-    public Vector3 boxSize = new Vector3(0.05f, 0.05f, 0.05f);
+    public Vector3 boxSize = new Vector3(0.1f, 0.1f, 0.1f);
 
     public bool enableKeyboardTranslation = true;
     public bool enableKeyboardRotation = true;
@@ -19,14 +20,25 @@ public class BoxGripper : MonoBehaviour
     private List<int> graspedNodes = new List<int>();
     private Dictionary<int, Vector3> localNodeOffsets = new Dictionary<int, Vector3>();
 
+    public SteamVR_Action_Boolean m_GrabAction = null;
+    public SteamVR_Action_Single squeezeAction;
+
+    public bool isLeft = true;
+
+    private SteamVR_Behaviour_Pose m_Pose = null;
+    private FixedJoint m_Joint = null;
+
     // To set the scale same as the box size for visualization
     void Awake()
     {
-        transform.localScale = boxSize;
-        transform.position = new Vector3(2, 1, -4);
+        transform.GetChild(2).transform.localScale = boxSize;
+        //transform.position = new Vector3(0, 1, 0);
+        m_Pose = GetComponent<SteamVR_Behaviour_Pose>();
+        m_Joint = GetComponent<FixedJoint>();
     }
     void Update()
     {
+        //Debug.Log("Bola: " + transform.GetChild(1).transform.position);
         if (enableKeyboardTranslation)
         {
             TranslateBoxWithKeyboard();
@@ -35,7 +47,7 @@ public class BoxGripper : MonoBehaviour
         {
             RotateBoxWithKeyboard();
         }
-        if (Input.GetKeyDown(KeyCode.G))
+        if (Input.GetKeyDown(KeyCode.G) || m_GrabAction.GetStateDown(m_Pose.inputSource))
         {
             if (!isGrasping)
             {
@@ -45,7 +57,7 @@ public class BoxGripper : MonoBehaviour
                 
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) || m_GrabAction.GetStateUp(m_Pose.inputSource))
         {
             Debug.Log("R pressed: releasing nodes");
             ReleaseNodes();
@@ -90,7 +102,7 @@ public class BoxGripper : MonoBehaviour
         }
          if (motion.sqrMagnitude > 0.0f)
         {
-            transform.position += motion.normalized * translationSpeed * Time.deltaTime;
+           // transform.position += motion.normalized * translationSpeed * Time.deltaTime;
         }
 
     }
@@ -135,14 +147,14 @@ public class BoxGripper : MonoBehaviour
 
     bool IsInsideBox(Vector3 worldPoint)
     {
-        Vector3 localPoint = transform.InverseTransformPoint(worldPoint);
-
+        //Vector3 localPoint = transform.GetChild(2).InverseTransformPoint(worldPoint);
+        Vector3 localPoint = worldPoint - transform.GetChild(2).position;
         Vector3 halfSize = 0.5f * boxSize;
         // divide by boxsize because the scale affects the 
-        // InverseTransformPouint function
-        return  Mathf.Abs(localPoint.x) <= halfSize.x / boxSize.x &&
-                Mathf.Abs(localPoint.y) <= halfSize.y / boxSize.y &&
-                Mathf.Abs(localPoint.z) <= halfSize.z / boxSize.z;
+        // InverseTransformPoint function
+        return  Mathf.Abs(localPoint.x) <= halfSize.x  &&
+                Mathf.Abs(localPoint.y) <= halfSize.y  &&
+                Mathf.Abs(localPoint.z) <= halfSize.z;
 
     }
     void GraspNodesInsideBox()
@@ -194,7 +206,6 @@ public class BoxGripper : MonoBehaviour
 
             // Convert node position from world frame to box local frame
             Vector3 nodeLocalPosition = transform.InverseTransformPoint(nodeWorldPosition);
-                
             graspedNodes.Add(nodeIndex);
             // need this to send offsets for control in the next function
             localNodeOffsets[nodeIndex] = nodeLocalPosition;
