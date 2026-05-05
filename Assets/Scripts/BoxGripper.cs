@@ -149,6 +149,9 @@ public class BoxGripper : MonoBehaviour
     {
         //Vector3 localPoint = transform.GetChild(2).InverseTransformPoint(worldPoint);
         Vector3 localPoint = worldPoint - transform.GetChild(2).position;
+        Matrix4x4 rotationMatrix = Matrix4x4.Rotate(transform.rotation);
+        localPoint = rotationMatrix.MultiplyPoint3x4(localPoint);
+
         Vector3 halfSize = 0.5f * boxSize;
         // divide by boxsize because the scale affects the 
         // InverseTransformPoint function
