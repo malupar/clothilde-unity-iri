@@ -14,34 +14,34 @@ public class DragHandle : MonoBehaviour
     private Vector3 offset;
     private float zCoord;
 
-    void OnMouseDown()
-    {
-        zCoord = Camera.main.WorldToScreenPoint(transform.position).z;
+    // void OnMouseDown()
+    // {
+    //     zCoord = Camera.main.WorldToScreenPoint(transform.position).z;
 
-        offset = transform.position - GetMouseWorldPosition();
-    }
+    //     offset = transform.position - GetMouseWorldPosition();
+    // }
 
-    void OnMouseUp()
-    {
-        manipulator.LetHandleGo(nodeIndex);
-    }
+    // void OnMouseUp()
+    // {
+    //     manipulator.LetHandleGo(nodeIndex);
+    // }
 
-    void OnMouseDrag()
-    {
-        Vector3 newWorldPosition = GetMouseWorldPosition() + offset;
+    // void OnMouseDrag()
+    // {
+    //     Vector3 newWorldPosition = GetMouseWorldPosition() + offset;
         
-        transform.position = newWorldPosition;
+    //     transform.position = newWorldPosition;
         
-        manipulator.DragHandle(nodeIndex, newWorldPosition);
-    }
+    //     manipulator.DragHandle(nodeIndex, newWorldPosition);
+    // }
     
-    private Vector3 GetMouseWorldPosition()
-    {
-        Vector3 mousePoint = Input.mousePosition;
-        mousePoint.z = zCoord; 
+    // private Vector3 GetMouseWorldPosition()
+    // {
+    //     Vector3 mousePoint = Input.mousePosition;
+    //     mousePoint.z = zCoord; 
 
-        return Camera.main.ScreenToWorldPoint(mousePoint);
-    }
+    //     return Camera.main.ScreenToWorldPoint(mousePoint);
+    // }
 
     public void HandSelected(Vector3 worldPosition) {
         offset = transform.position - worldPosition;
