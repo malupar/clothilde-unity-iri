@@ -15,7 +15,7 @@ public class Assembly : MonoBehaviour
     public float closedGap = 0.04f * (30 - 6); 
     // 0.04 is the scale of the gripper assembly
     // 30 mm - 6 mm (extension length) is the gap between the grippers in my CAD model
-    public float jawSpeed = 1.2f;
+    public float jawSpeed = 1.5f;
 
     private bool isOpen = true;
     private float currentGap;
