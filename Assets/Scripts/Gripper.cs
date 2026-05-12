@@ -1,14 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Valve.VR;
 
-public class BoxGripper : MonoBehaviour
+public class Gripper : MonoBehaviour
 {
     [Header("Cloth")]
     public TriangleMesh cloth;
-
-    [Header("Box dimensions in local coordinates")]
-    public Vector3 boxSize = new Vector3(0.1f, 0.1f, 0.1f);
 
     [Header("Keyboard control")]
     public bool enableKeyboardTranslation = true;
@@ -30,14 +26,49 @@ public class BoxGripper : MonoBehaviour
     private bool isGrasping = false;
     private List<int> graspedNodes = new List<int>();
     private Dictionary<int, Vector3> localNodeOffsets = new Dictionary<int, Vector3>();
+    
+    [Header("Initial pose")]
+    public Vector3 initialBoxCenter = new Vector3(0.0f, 1.0f, 0.0f);
 
+    [Header("Grasp box visual")]
+    public Transform graspBoxVisual;
+    public Vector3 graspBoxSize = new Vector3(0.04f, 0.04f, 0.04f);
 
-    // To set the scale same as the box size for visualization
+    [Header("Visual gripper assembly")]
+    public Assembly gripperAssembly;
+    public float gripperAssemblyScale = 0.04f; // same scale as in the parts heirarchy
+
+    // Distance from grasp box center to CAD gripper root.
+    // Equivalent to using the opposite of Python tip_center_local.
+    public float t = 0.06f;
+
+    // Usually try +t first. If it appears on the wrong side, use -t.
+    public Vector3 gripperAssemblyOffsetDirection = new Vector3(0.0f, 1.0f, 0.0f);
+
     void Awake()
     {
-        transform.transform.localScale = boxSize;
-        transform.position = new Vector3(0, 1, 0);
+        // The Gripper object itself is the grasp box center.
+        transform.position = initialBoxCenter;
+        transform.rotation = Quaternion.identity;
+
+        // Visual box used to show the grasp region.
+        if (graspBoxVisual != null)
+        {
+            graspBoxVisual.localPosition = Vector3.zero;
+            graspBoxVisual.localRotation = Quaternion.identity;
+            graspBoxVisual.localScale = graspBoxSize;
+        }
+
+        // CAD gripper assembly, shifted relative to the grasp box.
+        if (gripperAssembly != null)
+        {
+            // float t =  52 * gripperAssemblyScale - graspBoxSize.y / 2;
+            gripperAssembly.transform.localPosition = gripperAssemblyOffsetDirection.normalized * t;
+            gripperAssembly.transform.localRotation = Quaternion.identity;
+            gripperAssembly.transform.localScale = Vector3.one * gripperAssemblyScale;
+        }
     }
+
     void Update()
     {
         if (enableKeyboardTranslation)
@@ -52,6 +83,10 @@ public class BoxGripper : MonoBehaviour
         {
             if (!isGrasping)
             {
+                if (gripperAssembly != null)
+                {
+                    gripperAssembly.Close();
+                }
                 Debug.Log("G pressed: grasping nodes");
                 GraspNodesInsideBox(); 
             }
@@ -60,6 +95,10 @@ public class BoxGripper : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.R))
         {
+            if (gripperAssembly != null)
+                {
+                    gripperAssembly.Open();
+                }
             Debug.Log("R pressed: releasing nodes");
             ReleaseNodes();
         }
@@ -148,12 +187,15 @@ public class BoxGripper : MonoBehaviour
 
     bool IsInsideBox(Vector3 worldPoint)
     {
-        //Vector3 localPoint = transform.GetChild(2).InverseTransformPoint(worldPoint);
-        Vector3 localPoint = worldPoint - transform.position;
-        Matrix4x4 rotationMatrix = Matrix4x4.Rotate(transform.rotation);
-        localPoint = rotationMatrix.MultiplyPoint3x4(localPoint);
+        Vector3 localPoint = transform.InverseTransformPoint(worldPoint);
+        // Debug.Log("unity built in: " + localPoint);
+        
+        // Vector3 localPoint = worldPoint - transform.position;
+        // localPoint = Quaternion.Inverse(transform.rotation) * localPoint;
+        // Debug.Log("My function:" + localPoint1);
+        
 
-        Vector3 halfSize = 0.5f * boxSize;
+        Vector3 halfSize = 0.5f * graspBoxSize;
         // divide by boxsize because the scale affects the 
         // InverseTransformPoint function
         return  Mathf.Abs(localPoint.x) <= halfSize.x  &&
@@ -272,8 +314,10 @@ public class BoxGripper : MonoBehaviour
             }
         }
 
-        graspedNodes.Clear();
         localNodeOffsets.Clear();
+        localNodeRestOffsets.Clear();
+        localNodeGoalOffsets.Clear();
+        graspedNodes.Clear();
         isGrasping = false;
     }
 }

@@ -1097,7 +1097,6 @@ class Cloth:
         return self.TrapezoidalRule()
     
     def processControlInputs(self,u,control):
-        control = control.tolist()
         n_ctr = len(control)
         control = control.tolist()
         if n_ctr > 0:
