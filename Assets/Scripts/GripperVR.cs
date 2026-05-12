@@ -7,10 +7,9 @@ public class GripperVR : MonoBehaviour
     [Header("Cloth")]
     public TriangleMesh cloth;
 
-    [Header("SteamVR")]
-    public SteamVR_Action_Boolean m_GrabAction = null;
-
-    private SteamVR_Behaviour_Pose m_Pose = null;
+    [Header("Grasp frame")]
+    public Transform graspFrame;
+    public Vector3 controllerLocalOffset = new Vector3(0.0f, 0.0f, 0.2f);
 
     [Header("Grasp box visual")]
     public Transform graspBoxVisual;
@@ -22,55 +21,47 @@ public class GripperVR : MonoBehaviour
 
     // Distance from grasp box center to CAD gripper root.
     // Change sign/direction depending on your CAD orientation.
-    public float t = 0.06f;
-    public Vector3 gripperAssemblyOffsetDirection = new Vector3(0.0f, 1.0f, 0.0f);
+    public float t = 0.04f;
+    public Vector3 gripperAssemblyOffsetDirection = new Vector3(-1.7f, 1.35f, -1.7f); // by moving the assembly to match the box in #Scene
 
     [Header("Squeeze")]
     public bool enableSqueeze = true;
     public float squeezeAmount = 0.5f;
     public float squeezeAlphaStep = 0.1f;
     private float squeezeAlpha = 1.0f;
-    private bool isGrasping = false;
 
+    private bool isGrasping = false;
     private List<int> graspedNodes = new List<int>();
 
     private Dictionary<int, Vector3> localNodeOffsets = new Dictionary<int, Vector3>();
     private Dictionary<int, Vector3> localNodeRestOffsets = new Dictionary<int, Vector3>();
     private Dictionary<int, Vector3> localNodeGoalOffsets = new Dictionary<int, Vector3>();
 
+    public SteamVR_Action_Boolean m_GrabAction = null;
+    private SteamVR_Behaviour_Pose m_Pose = null;
+    private FixedJoint m_Joint = null;
+
+    [Header("Initial pose")]
+    public Vector3 initialBoxCenter = new Vector3(0.0f, 0.0f, 0.0f);
+
     void Awake()
     {
         m_Pose = GetComponent<SteamVR_Behaviour_Pose>();
+        m_Joint = GetComponent<FixedJoint>();
 
-        // // In VR, the controller pose should usually control this object.
-        // // So keep useInitialPose = false in the VR scene.
-        // if (useInitialPose)
-        // {
-        //     transform.position = initialBoxCenter;
-        //     transform.rotation = Quaternion.identity;
-        // }
+        graspFrame.localPosition = controllerLocalOffset;
 
-        InitializeVisuals();
+        graspBoxVisual.localPosition = Vector3.zero;
+        // graspBoxVisual.localRotation = Quaternion.identity;
+        graspBoxVisual.localScale = graspBoxSize;
+
+        gripperAssembly.transform.localPosition = gripperAssemblyOffsetDirection * t;
+        // gripperAssembly.transform.localPosition = Vector3.zero;
+        // gripperAssembly.transform.localRotation = Quaternion.identity;
+        gripperAssembly.transform.localScale = Vector3.one * gripperAssemblyScale;
+
     }
 
-    void InitializeVisuals()
-    {
-        if (graspBoxVisual != null)
-        {
-            graspBoxVisual.localPosition = Vector3.zero;
-            graspBoxVisual.localRotation = Quaternion.identity;
-            graspBoxVisual.localScale = graspBoxSize;
-        }
-
-        if (gripperAssembly != null)
-        {
-            gripperAssembly.transform.localPosition =
-                gripperAssemblyOffsetDirection.normalized * t;
-
-            gripperAssembly.transform.localRotation = Quaternion.identity;
-            gripperAssembly.transform.localScale = Vector3.one * gripperAssemblyScale;
-        }
-    }
 
     void Update()
     {
@@ -108,7 +99,10 @@ public class GripperVR : MonoBehaviour
     {
         // Since this GameObject is the grasp-box center,
         // transform.InverseTransformPoint gives the point in grasp-box coordinates.
-        Vector3 localPoint = transform.InverseTransformPoint(worldPoint);
+        Vector3 localPoint = graspFrame.InverseTransformPoint(worldPoint);
+        // Vector3 localPoint = worldPoint - transform.position;
+        // localPoint = Quaternion.Inverse(transform.rotation) * localPoint;
+        // Debug.Log("position: " + localPoint);
 
         Vector3 halfSize = 0.5f * graspBoxSize;
 
@@ -121,15 +115,40 @@ public class GripperVR : MonoBehaviour
     {
         ReleaseNodes();
 
-        if (cloth == null)
-        {
-            Debug.LogError("BoxGripperVR: TriangleMesh reference is missing.");
-            return;
-        }
-
         HashSet<int> selectNodes = new HashSet<int>();
 
         List<TriangleMesh.GraspCandidate> candidates = cloth.GetAllGraspCandidates();
+
+        // for printing
+        System.Text.StringBuilder table = new System.Text.StringBuilder();
+
+        table.AppendLine("========== SELECTED GRASP CANDIDATES ==========");
+        table.AppendLine("Type\t\tID\tPosition\t\t\tNodes");
+        table.AppendLine("-----------------------------------------------");
+
+        foreach (TriangleMesh.GraspCandidate candidate in candidates)
+        {
+            if (IsInsideBox(candidate.worldPosition))
+            {
+                foreach (int nodeIndex in candidate.nodeIndices)
+                    {
+                    selectNodes.Add(nodeIndex);
+                    }
+
+                    table.AppendLine(candidate.type + "\t" + 
+                            candidate.id + "\t" +
+                            candidate.worldPosition + "\t" +
+                            string.Join(", ", candidate.nodeIndices));
+
+            }
+        }
+
+        table.AppendLine("-----------------------------------------------");
+        table.AppendLine("Unique selected nodes: " + selectNodes.Count);
+        table.AppendLine("Selected node indices: " + string.Join(", ", selectNodes));
+        Debug.Log(table.ToString());
+
+        //
 
         foreach (TriangleMesh.GraspCandidate candidate in candidates)
         {
@@ -147,7 +166,7 @@ public class GripperVR : MonoBehaviour
             Vector3 nodeWorldPosition = cloth.GetNodeWorldPosition(nodeIndex);
 
             // Store unsqueezed node position in gripper/box local frame.
-            Vector3 restLocal = transform.InverseTransformPoint(nodeWorldPosition);
+            Vector3 restLocal = graspFrame.InverseTransformPoint(nodeWorldPosition);
 
             // Build squeezed goal.
             Vector3 goalLocal = restLocal;
@@ -192,7 +211,7 @@ public class GripperVR : MonoBehaviour
 
             localNodeOffsets[nodeIndex] = localOffset;
 
-            Vector3 newWorldPosition = transform.TransformPoint(localOffset);
+            Vector3 newWorldPosition = graspFrame.TransformPoint(localOffset);
 
             cloth.DragHandle(nodeIndex, newWorldPosition);
 

@@ -473,17 +473,14 @@
 "Assets/Legacy/MouseManager.cs"
 "Assets/Legacy/PythonManager.cs"
 "Assets/Legacy/Triangle.cs"
-<<<<<<< HEAD
 "Assets/Scripts/Assembly.cs"
-=======
-"Assets/Scripts/BoxGripper.cs"
->>>>>>> 3112399b3baddb223e71edd8a441c734f833adf1
 "Assets/Scripts/BoxGripperVR.cs"
 "Assets/Scripts/ColorChange.cs"
 "Assets/Scripts/DragController.cs"
 "Assets/Scripts/DragHandle.cs"
 "Assets/Scripts/GradientGenerator.cs"
 "Assets/Scripts/Gripper.cs"
+"Assets/Scripts/GripperVR.cs"
 "Assets/Scripts/JsonExporter.cs"
 "Assets/Scripts/PythonConnection.cs"
 "Assets/Scripts/TriangleMesh.cs"
