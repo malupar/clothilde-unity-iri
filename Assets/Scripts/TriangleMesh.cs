@@ -554,3 +554,5 @@ public class TriangleMesh : MonoBehaviour
         loadPositionsFromMesh();
     }
 }
+
+

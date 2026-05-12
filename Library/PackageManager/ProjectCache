@@ -1,39 +1,39 @@
 m_ProjectFiles:
   m_ManifestFileStatus:
-    m_FilePath: Z:/vs/clothilde-unity-iri/Packages/manifest.json
+    m_FilePath: C:/Users/maparicio/Documents/My project/Packages/manifest.json
     m_PathExists: 1
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 639113380271296259
-    m_Hash: 3299311510
+      ticks: 639068520377889195
+    m_Hash: 2382236768
   m_LockFileStatus:
-    m_FilePath: Z:/vs/clothilde-unity-iri/Packages/packages-lock.json
+    m_FilePath: C:/Users/maparicio/Documents/My project/Packages/packages-lock.json
     m_PathExists: 1
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 639113380271296259
-    m_Hash: 1567611213
+      ticks: 639068520377921995
+    m_Hash: 4208643293
 m_EmbeddedPackageManifests:
   m_ManifestsStatus: {}
 m_LocalPackages:
   m_LocalFileStatus:
-  - m_FilePath: Z:\vs\clothilde-unity-iri\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz/package.json
+  - m_FilePath: C:\Users\maparicio\Documents\My project\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz/package.json
     m_PathExists: 0
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
       ticks: 0
     m_Hash: 0
-  - m_FilePath: Z:\vs\clothilde-unity-iri\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz
+  - m_FilePath: C:\Users\maparicio\Documents\My project\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz
     m_PathExists: 1
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
       serializedVersion: 2
-      ticks: 639113380081214053
+      ticks: 639057030648423841
     m_Hash: 4235084898
-m_ProjectPath: Z:/vs/clothilde-unity-iri/Packages
+m_ProjectPath: C:/Users/maparicio/Documents/My project/Packages
 m_EditorVersion: 6000.3.1f1 (37142da19a94)
 m_ResolvedPackages:
 - packageId: com.unity.collab-proxy@2.10.2
@@ -41,7 +41,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 2.10.2
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.collab-proxy@3351acaba9c9
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.collab-proxy@3351acaba9c9
   assetPath: Packages/com.unity.collab-proxy
   name: com.unity.collab-proxy
   displayName: Unity Version Control
@@ -230,7 +230,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 3.0.38
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.ide.rider@1f60b3138684
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.ide.rider@1f60b3138684
   assetPath: Packages/com.unity.ide.rider
   name: com.unity.ide.rider
   displayName: JetBrains Rider Editor
@@ -295,10 +295,12 @@ m_ResolvedPackages:
     - 3.0.37
     - 3.0.38
     - 3.0.39
+    - 3.0.40
     compatible:
     - 3.0.38
     - 3.0.39
-    recommended: 3.0.39
+    - 3.0.40
+    recommended: 3.0.40
     deprecated:
     - 3.0.37
   dependencies:
@@ -363,7 +365,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 2.0.25
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.ide.visualstudio@74aa435fc4bb
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.ide.visualstudio@74aa435fc4bb
   assetPath: Packages/com.unity.ide.visualstudio
   name: com.unity.ide.visualstudio
   displayName: Visual Studio Editor
@@ -481,7 +483,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 1.0.1
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.multiplayer.center@f01f4ba8d00a
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.multiplayer.center@f01f4ba8d00a
   assetPath: Packages/com.unity.multiplayer.center
   name: com.unity.multiplayer.center
   displayName: Multiplayer Center
@@ -577,7 +579,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 17.3.0
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.render-pipelines.universal@6ea13a8ff72f
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.render-pipelines.universal@6ea13a8ff72f
   assetPath: Packages/com.unity.render-pipelines.universal
   name: com.unity.render-pipelines.universal
   displayName: Universal Render Pipeline
@@ -702,7 +704,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 1.6.0
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.test-framework@0b7a23ab2e1d
   assetPath: Packages/com.unity.test-framework
   name: com.unity.test-framework
   displayName: Test Framework
@@ -792,7 +794,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 1.8.9
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.timeline@6b9e48457ddb
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.timeline@6b9e48457ddb
   assetPath: Packages/com.unity.timeline
   name: com.unity.timeline
   displayName: Timeline
@@ -996,7 +998,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 2.0.0
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.ugui@8141084bceb4
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.ugui@8141084bceb4
   assetPath: Packages/com.unity.ugui
   name: com.unity.ugui
   displayName: Unity UI
@@ -1092,7 +1094,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 1.9.9
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.visualscripting@191c0d7e3b69
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.visualscripting@191c0d7e3b69
   assetPath: Packages/com.unity.visualscripting
   name: com.unity.visualscripting
   displayName: Visual Scripting
@@ -1223,7 +1225,7 @@ m_ResolvedPackages:
   isDirectDependency: 1
   version: 4.5.2
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.xr.oculus@44578ba4bd45
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.xr.oculus@44578ba4bd45
   assetPath: Packages/com.unity.xr.oculus
   name: com.unity.xr.oculus
   displayName: Oculus XR Plugin
@@ -1419,12 +1421,13 @@ m_ResolvedPackages:
       scopePatternExpression: 
       message: 
       readMoreLink: 
-- packageId: com.valvesoftware.unity.openvr@file:Z:\vs\clothilde-unity-iri\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz
+- packageId: com.valvesoftware.unity.openvr@file:C:\Users\maparicio\Documents\My
+    project\Assets\SteamVR\OpenVRUnityXRPackage\Editor\com.valvesoftware.unity.openvr-1.2.1.tgz
   testable: 0
   isDirectDependency: 1
   version: 1.2.1
   source: 6
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.valvesoftware.unity.openvr@970ac47786c4
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.valvesoftware.unity.openvr@970ac47786c4
   assetPath: Packages/com.valvesoftware.unity.openvr
   name: com.valvesoftware.unity.openvr
   displayName: OpenVR XR Plugin
@@ -4483,7 +4486,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 4.5.3
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.xr.management@574ebfb1e976
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.xr.management@574ebfb1e976
   assetPath: Packages/com.unity.xr.management
   name: com.unity.xr.management
   displayName: XR Plugin Management
@@ -4557,9 +4560,11 @@ m_ResolvedPackages:
     - 4.5.2
     - 4.5.3
     - 4.5.4
+    - 4.6.0
     compatible:
     - 4.5.3
     - 4.5.4
+    - 4.6.0
     recommended: 4.5.4
     deprecated: []
   dependencies:
@@ -4649,7 +4654,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 2.1.13
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.xr.legacyinputhelpers@9535ff2c27ac
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.xr.legacyinputhelpers@9535ff2c27ac
   assetPath: Packages/com.unity.xr.legacyinputhelpers
   name: com.unity.xr.legacyinputhelpers
   displayName: XR Legacy Input Helpers
@@ -4782,7 +4787,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 2.0.5
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.ext.nunit@d8c07649098d
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.ext.nunit@d8c07649098d
   assetPath: Packages/com.unity.ext.nunit
   name: com.unity.ext.nunit
   displayName: Custom NUnit
@@ -4862,7 +4867,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 17.3.0
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.render-pipelines.core@7e63c2374bcc
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.render-pipelines.core@7e63c2374bcc
   assetPath: Packages/com.unity.render-pipelines.core
   name: com.unity.render-pipelines.core
   displayName: Scriptable Render Pipeline Core
@@ -4984,7 +4989,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 17.3.0
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.shadergraph@252d58e80e1a
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.shadergraph@252d58e80e1a
   assetPath: Packages/com.unity.shadergraph
   name: com.unity.shadergraph
   displayName: Shader Graph
@@ -5098,7 +5103,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 17.0.3
   source: 2
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.render-pipelines.universal-config@8dc1aab4af1d
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.render-pipelines.universal-config@8dc1aab4af1d
   assetPath: Packages/com.unity.render-pipelines.universal-config
   name: com.unity.render-pipelines.universal-config
   displayName: Universal Render Pipeline Config
@@ -5204,7 +5209,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 2.5.3
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.xr.core-utils@f0450cbac8d6
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.xr.core-utils@f0450cbac8d6
   assetPath: Packages/com.unity.xr.core-utils
   name: com.unity.xr.core-utils
   displayName: XR Core Utilities
@@ -5253,10 +5258,12 @@ m_ResolvedPackages:
     - 2.5.3
     - 2.6.0-pre.1
     - 2.6.0-pre.2
+    - 2.6.0
     compatible:
     - 2.5.3
     - 2.6.0-pre.1
     - 2.6.0-pre.2
+    - 2.6.0
     recommended: 2.5.3
     deprecated: []
   dependencies:
@@ -5334,7 +5341,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 4.9.4
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.searcher@d45a78918735
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.searcher@d45a78918735
   assetPath: Packages/com.unity.searcher
   name: com.unity.searcher
   displayName: Searcher
@@ -5431,7 +5438,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 1.8.26
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.burst@21aa83e7fd8f
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.burst@21aa83e7fd8f
   assetPath: Packages/com.unity.burst
   name: com.unity.burst
   displayName: Burst
@@ -5673,7 +5680,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 1.3.3
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.mathematics@19a9377c4ffa
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.mathematics@19a9377c4ffa
   assetPath: Packages/com.unity.mathematics
   name: com.unity.mathematics
   displayName: Mathematics
@@ -5773,7 +5780,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 2.6.2
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.collections@aea9d3bd5e19
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.collections@aea9d3bd5e19
   assetPath: Packages/com.unity.collections
   name: com.unity.collections
   displayName: Collections
@@ -5869,12 +5876,14 @@ m_ResolvedPackages:
     - 2.6.3
     - 2.6.4
     - 2.6.5
+    - 2.6.6
     compatible:
     - 2.6.2
     - 2.6.3
     - 2.6.4
     - 2.6.5
-    recommended: 2.6.5
+    - 2.6.6
+    recommended: 2.6.6
     deprecated: []
   dependencies:
   - name: com.unity.burst
@@ -5963,7 +5972,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 1.11.6
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff
   assetPath: Packages/com.unity.nuget.mono-cecil
   name: com.unity.nuget.mono-cecil
   displayName: Mono Cecil
@@ -6057,7 +6066,7 @@ m_ResolvedPackages:
   isDirectDependency: 0
   version: 3.2.0
   source: 1
-  resolvedPath: Z:\vs\clothilde-unity-iri\Library\PackageCache\com.unity.test-framework.performance@0840f58e4562
+  resolvedPath: C:\Users\maparicio\Documents\My project\Library\PackageCache\com.unity.test-framework.performance@0840f58e4562
   assetPath: Packages/com.unity.test-framework.performance
   name: com.unity.test-framework.performance
   displayName: Performance testing API
@@ -6128,11 +6137,15 @@ m_ResolvedPackages:
     - 3.2.1
     - 3.3.0
     - 3.4.0
+    - 3.4.1
+    - 3.4.2
     compatible:
     - 3.2.0
     - 3.2.1
     - 3.3.0
     - 3.4.0
+    - 3.4.1
+    - 3.4.2
     recommended: 3.2.1
     deprecated: []
   dependencies:
