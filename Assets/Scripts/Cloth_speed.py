@@ -721,6 +721,7 @@ class Cloth:
         diag1 = self.computeNorm(self.positions[d1]-self.positions[d3])
         #constant radious of the balls
         self.rad = self.thck*np.mean(longs)/2.05
+        self.max_step = self.max_mov*np.mean(longs)
 
         #matrix of radiouses
         matrix_rads = 2*self.rad*np.ones((self.n_verts,self.n_verts),dtype=float)
@@ -739,8 +740,8 @@ class Cloth:
     def setSimulatorParameters(self, dt = 1/60, tol = 0.0075, sub_steps = 10,
                                rho = 0.1, delta = 0.1, alpha = 0.2,
                                kappa = 0.5*1e-4, kappa_bnd = 0.05*1e-4, 
-                               str = 0.01*1e-4, shr = 10*1e-4,
-                               mu_f = 0.2, mu_s = 0.35, thck = 0.95):
+                               str = 0.01*1e-4, shr = 10*1e-4, slf = 1*1e-4,
+                               mu_f = 0.2, mu_s = 0.35, thck = 0.95, max_mov= 0.1):
         #solver parameters
         self.frame_rate = dt #desired frame rate
         self.sub_steps = sub_steps
@@ -759,12 +760,14 @@ class Cloth:
         self.beta = 0.02*self.kappa # fast damping: do not change in general
         self.str = str/(self.dt**2) # stretch elasticity
         self.shr = shr/(self.dt**2) # shear elasticity
+        self.slf = slf/(self.dt**2) # self-collisions elasticity
         self.mu_floor = mu_f #friction with to the floor
         self.mu_self = mu_s #friction for self-collisions
 
         #self-collision parameters
         self.thck = thck
         self.mov_tol = 0.025 #when some node moves 2.5% or more than its previous position, run computeClosePairs()
+        self.max_mov = max_mov #between 0 and 1 fraction of mean edge length that the control nodes can move in one time step
         self.computeRadiouses()
         self.eps_sus = 3.3*self.rad #threshold for detecting close balls in computeClosePairs()
 
@@ -890,7 +893,7 @@ class Cloth:
 
         #initial impulses
         num = -self.vals_slf[self.ind_slf]; 
-        den = w[b0_col] + w[b1_col] 
+        den = w[b0_col] + w[b1_col] + self.slf
         landa = np.maximum(0,num/den)
         #corrections
         dlt = landa[:,np.newaxis]*normals
@@ -906,7 +909,7 @@ class Cloth:
             dlt_xy = dlt_phi[b1_col] - dlt_phi[b0_col]
             dlt_vals = -self.innerProduct(normals,dlt_xy)
             #compute multipliers
-            res = (num + dlt_vals)
+            res = num + dlt_vals - self.slf*landa
             error_l = np.min(-res/rads)
             landa = np.maximum(0, landa + res/den)
             #corrections
@@ -933,15 +936,23 @@ class Cloth:
             #add new and previous selfcollisions
             ind_s = np.nonzero((self.vals_slf/self.rads) < self.tol)[0]
             self.ind_slf = self.unionMask(self.ind_slf,ind_s)
-            #correct positions
+            #correction for positions
             dlt_phi = self.solveLCP(max_iters)
-            phi += dlt_phi
+            
+            #lets project into stretch space
+            b = -self.stretch.grad@dlt_phi
+            dlt_lambda = self.stretch.factor(b)
+            prj_dlt_phi = dlt_phi + (self.stretch.gradT@dlt_lambda)
+            dlt_phi = 0.5*(dlt_phi + prj_dlt_phi)
+            
             #apply friction if needed
             if self.mu_self > 0 and n_iter < 5:
-                F_mu = self.computeFrictionCorrection(phi,dlt_phi)
-                phi += F_mu
-            #check for possible new selfcollisions
-            #self.updateSelfCollisions(phi)
+                F_mu = self.computeFrictionCorrection(phi + dlt_phi,dlt_phi)
+            else:
+                F_mu = 0*phi
+
+            #update phi
+            phi += dlt_phi + F_mu
             
         return phi
     
@@ -1135,6 +1146,20 @@ class Cloth:
 
         np_array = np.ctypeslib.as_array(raw_pointer, shape=(length,))
         return np_array
+    
+    def limitControlVelocity(self, u_raw):
+        u_raw_mat = u_raw.reshape((len(self.control), 3), order="F")
+
+        u_used = self.positions[self.control]
+
+        du = u_raw_mat - u_used
+        dist = self.computeNorm(du)
+        scale = np.minimum(1.0, self.max_step / (dist + 1e-12))
+
+        u_clmp = u_used + scale[:, None] * du
+
+        return u_clmp.flatten(order="F")
+
 
     @profile
     def simulate(self, u, control, l):
@@ -1152,7 +1177,8 @@ class Cloth:
             phi0 = self.positions.reshape((3*self.n_verts,),order = 'F')
 
             #interpolated control
-            u = U[s]; #u_mat = u.reshape((n_ctr,3),order='F')
+            u_raw = U[s]; #u_mat = u.reshape((n_ctr,3),order='F')
+            u = self.limitControlVelocity(u_raw)
 
             #unconstrained step to correct
             phi = self.unconstrainedStep(self.implicitEuler)
@@ -1174,12 +1200,12 @@ class Cloth:
                 phi, lambda_str, error_str = self.projectConstraints(self.stretch,phi,u,control,
                                                                     lambda_str,self.str,0,0)   
                 
+                
                 #self-collisions
                 phi = self.selfCollisions(phi,n_iter); 
 
                 #iteration count 
                 n_iter += 1
-            #print(n_iter)
 
             #floor collisions
             phi = self.floorCollisions(phi)
@@ -1199,4 +1225,3 @@ class Cloth:
         if self.total_iters/(len(self.history_pos)-1) > 4 and self.warning == False:
            print("WARNING: average of more than 4 iterations taken, for better performance reduce dt or increase thck")
            self.warning = True
-
