@@ -23,8 +23,9 @@ public class JsonExporter : MonoBehaviour
 {
     [Header("Settings")]
     public string targetTag = "Exportable"; // Only objects with this tag will be saved
-    public string fileName = "LiveExport.json";
-    private string exportPath = @"Z:\vs\clothilde-unity-iri\Assets\Exports";
+    public string fileName = "ExportTest.json";
+    // private string exportPath = @"Z:\vs\clothilde-unity-iri\Assets\Exports";
+    private string exportPath = @"C:\Users\maparicio\Documents\My project\Exports";
     
     private bool isExporting = false;
     private SceneDataWrapper dataWrapper = new SceneDataWrapper();
