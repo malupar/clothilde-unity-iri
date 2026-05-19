@@ -52,12 +52,9 @@ public class GripperVR : MonoBehaviour
         graspFrame.localPosition = controllerLocalOffset;
 
         graspBoxVisual.localPosition = Vector3.zero;
-        // graspBoxVisual.localRotation = Quaternion.identity;
         graspBoxVisual.localScale = graspBoxSize;
 
         gripperAssembly.transform.localPosition = gripperAssemblyOffsetDirection * t;
-        // gripperAssembly.transform.localPosition = Vector3.zero;
-        // gripperAssembly.transform.localRotation = Quaternion.identity;
         gripperAssembly.transform.localScale = Vector3.one * gripperAssemblyScale;
 
     }
@@ -75,8 +72,7 @@ public class GripperVR : MonoBehaviour
                 }
                 Debug.Log("Grasping nodes");
                 GraspNodesInsideBox(); 
-            }
-                
+            }   
         }
 
         if (m_GrabAction.GetStateUp(m_Pose.inputSource))
@@ -97,12 +93,9 @@ public class GripperVR : MonoBehaviour
 
     bool IsInsideBox(Vector3 worldPoint)
     {
-        // Since this GameObject is the grasp-box center,
+        // Since this GameObject is the graspFrame,
         // transform.InverseTransformPoint gives the point in grasp-box coordinates.
         Vector3 localPoint = graspFrame.InverseTransformPoint(worldPoint);
-        // Vector3 localPoint = worldPoint - transform.position;
-        // localPoint = Quaternion.Inverse(transform.rotation) * localPoint;
-        // Debug.Log("position: " + localPoint);
 
         Vector3 halfSize = 0.5f * graspBoxSize;
 
