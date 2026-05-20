@@ -13,15 +13,15 @@ public class GripperVR : MonoBehaviour
 
     [Header("Grasp box visual")]
     public Transform graspBoxVisual;
-    public Vector3 graspBoxSize = new Vector3(0.04f, 0.04f, 0.04f);
+    public Vector3 graspBoxSize = new Vector3(0.06f, 0.06f, 0.06f);
 
     [Header("Visual gripper assembly")]
     public Assembly gripperAssembly;
-    public float gripperAssemblyScale = 0.04f;
+    public float gripperAssemblyScale = 0.06f;
 
     // Distance from grasp box center to CAD gripper root.
     // Change sign/direction depending on your CAD orientation.
-    public float t = 0.04f;
+    public float t = 0.06f;
     public Vector3 gripperAssemblyOffsetDirection = new Vector3(-1.7f, 1.35f, -1.7f); // by moving the assembly to match the box in #Scene
 
     [Header("Squeeze")]
