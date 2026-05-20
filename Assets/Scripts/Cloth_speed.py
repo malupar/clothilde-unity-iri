@@ -766,10 +766,10 @@ class Cloth:
 
         #self-collision parameters
         self.thck = thck
-        self.mov_tol = 0.025 #when some node moves 2.5% or more than its previous position, run computeClosePairs()
+        self.mov_tol = 0.035 #when some node moves 2.5% or more than its previous position, run computeClosePairs()
         self.max_mov = max_mov #between 0 and 1 fraction of mean edge length that the control nodes can move in one time step
         self.computeRadiouses()
-        self.eps_sus = 3.3*self.rad #threshold for detecting close balls in computeClosePairs()
+        self.eps_sus = 3.5*self.rad #threshold for detecting close balls in computeClosePairs()
 
 
         #factorize implicit step matrix E for fast unconstrained step
@@ -938,13 +938,13 @@ class Cloth:
             self.ind_slf = self.unionMask(self.ind_slf,ind_s)
             #correction for positions
             dlt_phi = self.solveLCP(max_iters)
-            
+            """
             #lets project into stretch space
             b = -self.stretch.grad@dlt_phi
             dlt_lambda = self.stretch.factor(b)
             prj_dlt_phi = dlt_phi + (self.stretch.gradT@dlt_lambda)
             dlt_phi = 0.5*(dlt_phi + prj_dlt_phi)
-            
+            """
             #apply friction if needed
             if self.mu_self > 0 and n_iter < 5:
                 F_mu = self.computeFrictionCorrection(phi + dlt_phi,dlt_phi)
