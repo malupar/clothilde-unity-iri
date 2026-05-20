@@ -109,7 +109,8 @@ public class PythonConnection : MonoBehaviour
                                                   kappa_bnd: mesh.kappa_bnd, 
                                                   alpha: mesh.alpha, 
                                                   shr: mesh.shr, 
-                                                  str: mesh.str);
+                                                  str: mesh.str,
+                                                  slf: mesh.slf);
             }
         }
         catch (PythonException e) {

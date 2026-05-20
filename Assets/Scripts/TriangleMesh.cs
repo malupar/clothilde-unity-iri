@@ -35,6 +35,7 @@ public class TriangleMesh : MonoBehaviour
     public float thck = 1.2f;
     public bool selfCollisions = true;
     public int smooth = 2;
+    public float slf = 1e-4f;
 
     // Mesh objects
     private Mesh meshUnity;
