@@ -110,7 +110,9 @@ public class PythonConnection : MonoBehaviour
                                                   alpha: mesh.alpha, 
                                                   shr: mesh.shr, 
                                                   str: mesh.str,
-                                                  slf: mesh.slf);
+                                                  slf: mesh.slf,
+                                                  cusick: mesh.testCusick,
+                                                  from_unity: true);
             }
         }
         catch (PythonException e) {

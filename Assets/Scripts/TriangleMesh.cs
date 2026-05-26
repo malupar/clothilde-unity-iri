@@ -33,9 +33,9 @@ public class TriangleMesh : MonoBehaviour
     public float mu_f = 0.2f;
     public float mu_s = 0.5f;
     public float thck = 1.2f;
-    public bool selfCollisions = true;
     public int smooth = 2;
     public float slf = 1e-4f;
+    public bool testCusick = true;
 
     // Mesh objects
     private Mesh meshUnity;
