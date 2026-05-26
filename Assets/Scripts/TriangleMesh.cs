@@ -347,7 +347,8 @@ public class TriangleMesh : MonoBehaviour
     }
 
     public List<Vector3> getTotalMeshPositions() {
-        return new List<Vector3> (meshUnity.vertices);
+        List<Vector3> tmp = new List<Vector3> (meshUnity.vertices);
+        return tmp.GetRange(0, numVertexHeight*numVertexWidth);
     }
 
     int[,] getFacesTri() {
