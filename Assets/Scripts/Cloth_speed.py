@@ -1221,7 +1221,6 @@ class Cloth:
         if self.from_unity:
             u = self.fromAddressToArray(u, l*3, ctypes.c_float)
             control = self.fromAddressToArray(control, l, ctypes.c_int32)
-        print(u)
         #process the control inputs
         U = self.processControlInputs(u,control)
 
