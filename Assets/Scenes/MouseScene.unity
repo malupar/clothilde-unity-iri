@@ -474,8 +474,8 @@ MonoBehaviour:
   translationSpeed: 0.2
   rotationSpeed: 50
   enableSqueeze: 1
-  squeezeAmount: 0.5
-  squeezeAlphaStep: 0.1
+  squeezeAmount: 0.6
+  squeezeAlphaStep: 0.15
   initialBoxCenter: {x: 0, y: 1, z: 0}
   graspBoxVisual: {fileID: 1811006416}
   graspBoxSize: {x: 0.04, y: 0.04, z: 0.04}
@@ -532,13 +532,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 559623371}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f874a34a1f4bb6a4b969af5408530c02, type: 3}
+  m_Script: {fileID: 11500000, guid: af641f0e78b32634f92e14b601cdd625, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::JsonExporter
-  targetTag: Exportable
-  fileName: Prueba2.json
+  m_EditorClassIdentifier: Assembly-CSharp::Exporter
+  exportFolder: Z:\IRI_2026\clothilde-sim\python_code\exported_data3
+  cloth: {fileID: 814687381}
+  gripper: {fileID: 425410113}
 --- !u!1 &814687378
 GameObject:
   m_ObjectHideFlags: 0
@@ -609,6 +610,7 @@ MonoBehaviour:
   thck: 1.2
   selfCollisions: 1
   smooth: 2
+  slf: 0.0001
   handlePrefab: {fileID: 7090687965099052303, guid: d1ebfd5a0962862488057ac5f13efe06, type: 3}
 --- !u!23 &814687382
 MeshRenderer:
