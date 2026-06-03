@@ -8,7 +8,6 @@ public class Assembly : MonoBehaviour
     public Transform leftJaw;
     public Transform rightJaw;
 
-
     [Header("Jaw motion")]
     public float openGap = 0.0f;
     // public float closedGap = - 0.001f * (30 - 6);
@@ -20,6 +19,11 @@ public class Assembly : MonoBehaviour
     private bool isOpen = true;
     private float currentGap;
     private float targetGap;
+    // The following to be able to read and export
+    public bool IsOpen
+    {
+        get { return isOpen; }
+    }
 
     void Start()
     {

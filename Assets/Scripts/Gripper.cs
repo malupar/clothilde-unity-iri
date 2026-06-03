@@ -14,14 +14,13 @@ public class Gripper : MonoBehaviour
 
     [Header("Squeeze")]
     public bool enableSqueeze = true;
-    public float squeezeAmount = 0.5f; // 0.5 = move halfway toward box center
+    public float squeezeAmount = 0.50f; // 0.5 = move halfway toward box center
     public float squeezeAlphaStep = 0.1f; // same logic as in Gripper.py: 0.1, 0.2, 0.3, ..., 1.0
     private float squeezeAlpha = 1.0f;
     // Current local target for each grasped node
     private Dictionary<int, Vector3> localNodeGoalOffsets = new Dictionary<int, Vector3>();
     // Initial unsqueezed local position
     private Dictionary<int, Vector3> localNodeRestOffsets = new Dictionary<int, Vector3>();
-
 
     private bool isGrasping = false;
     private List<int> graspedNodes = new List<int>();
@@ -201,7 +200,6 @@ public class Gripper : MonoBehaviour
         return  Mathf.Abs(localPoint.x) <= halfSize.x  &&
                 Mathf.Abs(localPoint.y) <= halfSize.y  &&
                 Mathf.Abs(localPoint.z) <= halfSize.z;
-
     }
     void GraspNodesInsideBox()
     {

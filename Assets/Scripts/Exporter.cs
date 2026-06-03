@@ -57,9 +57,10 @@ public class Exporter : MonoBehaviour
         Directory.CreateDirectory(exportFolder);
 
         ExportMeshOnce();
+        ExportSimulatorParametersOnce();
 
         clothFrames = new StringBuilder("frame,t,node_index,x,y,z\n"); // header
-        gripperPoses = new StringBuilder("frame,t,px,py,pz,qw,qx,qy,qz\n");
+        gripperPoses = new StringBuilder("frame,t,px,py,pz,qw,qx,qy,qz,jaw_open\n");
 
         Debug.Log("Cloth export started. Press P again to stop and save.");
     }
@@ -112,6 +113,33 @@ public class Exporter : MonoBehaviour
         File.WriteAllText(Path.Combine(exportFolder, "mesh_faces.csv"), faceSb.ToString());
     }
 
+    void ExportSimulatorParametersOnce()
+    {
+        string path = Path.Combine(exportFolder, "simulator_parameters.csv");
+
+        string header =
+            "dt,tol,sub_steps,rho,delta,alpha,kappa,kappa_bnd,str,shr,slf,mu_f,mu_s,thck";
+
+        string values = string.Join(",",
+            cloth.dt.ToString(CultureInfo.InvariantCulture),
+            cloth.tol.ToString(CultureInfo.InvariantCulture),
+            cloth.sub_steps.ToString(CultureInfo.InvariantCulture),
+            cloth.rho.ToString(CultureInfo.InvariantCulture),
+            cloth.delta.ToString(CultureInfo.InvariantCulture),
+            cloth.alpha.ToString(CultureInfo.InvariantCulture),
+            cloth.kappa.ToString(CultureInfo.InvariantCulture),
+            cloth.kappa_bnd.ToString(CultureInfo.InvariantCulture),
+            cloth.str.ToString(CultureInfo.InvariantCulture),
+            cloth.shr.ToString(CultureInfo.InvariantCulture),
+            cloth.slf.ToString(CultureInfo.InvariantCulture),
+            cloth.mu_f.ToString(CultureInfo.InvariantCulture),
+            cloth.mu_s.ToString(CultureInfo.InvariantCulture),
+            cloth.thck.ToString(CultureInfo.InvariantCulture)        
+            );
+
+        File.WriteAllLines(path, new string[] { header, values });
+    }
+
     void RecordFrame()
     {
         List<Vector3> verticesUnity = cloth.getTotalMeshPositions();
@@ -133,10 +161,19 @@ public class Exporter : MonoBehaviour
         Vector3 pGripper = UnityPointToPython(gripperFrame.position);
         Vector4 qGripper = UnityQuaternionToPython(gripperFrame.rotation);
 
+        // Default to open if assembly is missing
+        int jawOpen = 1;
+
+        if (gripper.gripperAssembly != null)
+        {
+            jawOpen = gripper.gripperAssembly.IsOpen ? 1 : 0;
+        }
+
         gripperPoses.AppendLine(
             $"{frame},{t}," + 
             $"{pGripper.x},{pGripper.y},{pGripper.z}," +
-            $"{qGripper.w}, {qGripper.x}, {qGripper.y}, {qGripper.z}"
+            $"{qGripper.w}, {qGripper.x}, {qGripper.y}, {qGripper.z}," +
+            $"{jawOpen}"
         );
     }
 
