@@ -10,10 +10,10 @@ using System.Collections.Generic;
 public class TriangleMesh : MonoBehaviour
 {
     [Header("Grid Settings")]
-    public int numVertexWidth = 20;
-    public int numVertexHeight = 20;
-    public float gridWidth = 1.0f;
-    public float gridHeight = 1.0f;
+    public int numVertexWidth = 21;
+    public int numVertexHeight = 21;
+    public float gridWidth = 0.7f;
+    public float gridHeight = 0.7f;
     public Vector3 originPosition = Vector3.zero;
     public bool doubleSided = true;
     public bool allHandles = true;
@@ -32,7 +32,7 @@ public class TriangleMesh : MonoBehaviour
     public float shr = 2.0f*1e-4f;
     public float mu_f = 0.2f;
     public float mu_s = 0.5f;
-    public float thck = 1.2f;
+    public float thck = 1.1f;
     public bool selfCollisions = true;
     public int smooth = 2;
     public float slf = 1e-4f;

@@ -8,7 +8,7 @@ using UnityEngine;
 public class ExporterBridge : MonoBehaviour
 {
     [Header("Export")]
-    public string exportFolder = @"Z:\IRI_2026\clothilde-sim\python_code\exported_data3";
+    public string exportFolder = @"C:\Users\maparicio\Documents\clothilde-sim\python_code\exported_data4";
 
     [Header("Scene references")]
     public TriangleMeshBridge cloth;
@@ -19,7 +19,8 @@ public class ExporterBridge : MonoBehaviour
     private StringBuilder clothFrames;
 
     // Gripper data
-    public GripperBridge gripper;
+    public GripperBridge[] grippers;
+    public GripperVRBridge[] vrGrippers;
     private StringBuilder gripperPoses;
 
     void Awake()
@@ -60,7 +61,7 @@ public class ExporterBridge : MonoBehaviour
         ExportSimulatorParametersOnce();
 
         clothFrames = new StringBuilder("frame,t,node_index,x,y,z\n"); // header
-        gripperPoses = new StringBuilder("frame,t,px,py,pz,qw,qx,qy,qz,jaw_open\n");
+        gripperPoses = new StringBuilder("frame,t,gripper_id,px,py,pz,qw,qx,qy,qz,jaw_open\n");
 
         Debug.Log("Cloth export started. Press P again to stop and save.");
     }
@@ -156,25 +157,60 @@ public class ExporterBridge : MonoBehaviour
 
         // gripper data export
 
-        Transform gripperFrame = gripper.transform;
+        int gid = 0;
 
+        if (grippers != null)
+        {
+            foreach (GripperBridge g in grippers)
+            {
+                if (g == null) continue;
+
+                RecordOneGripper(
+                    gid++,
+                    g.transform,
+                    !g.IsClosed,
+                    t
+                );
+            }
+        }
+
+        if (vrGrippers != null)
+        {
+            foreach (GripperVRBridge g in vrGrippers)
+            {
+                if (g == null) continue;
+
+                Transform frameTransform = g.graspFrame != null ? g.graspFrame : g.transform;
+
+                RecordOneGripper(
+                    gid++,
+                    frameTransform,
+                    !g.IsClosed,
+                    t
+                );
+            }
+        }
+
+        
+
+    }
+
+    void RecordOneGripper(
+        int gripperId,
+        Transform gripperFrame,
+        bool jawOpen,
+        float t)
+    {
         Vector3 pGripper = UnityPointToPython(gripperFrame.position);
         Vector4 qGripper = UnityQuaternionToPython(gripperFrame.rotation);
 
-        // Default to open if assembly is missing
-        int jawOpen = 1;
-
-        if (gripper.gripperAssembly != null)
-        {
-            jawOpen = gripper.gripperAssembly.IsOpen ? 1 : 0;
-        }
-
         gripperPoses.AppendLine(
-            $"{frame},{t}," + 
+            $"{frame},{t},{gripperId}," + 
             $"{pGripper.x},{pGripper.y},{pGripper.z}," +
             $"{qGripper.w}, {qGripper.x}, {qGripper.y}, {qGripper.z}," +
-            $"{jawOpen}"
+            $"{(jawOpen ? 1 : 0)}"
         );
+
     }
 
     // Unity point (x, y, z) -> clothilde-sim point (x, z, y - 1)

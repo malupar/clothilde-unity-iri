@@ -100,6 +100,7 @@ public class GripperBridge : MonoBehaviour
         {
             // send gripper pose and jaw status to Python
             cloth.StepGripperFromUnity(
+                GetInstanceID(),
                 transform.position,
                 transform.rotation,
                 graspBoxSize,
