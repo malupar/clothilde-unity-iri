@@ -1,5 +1,6 @@
 import os
 import ctypes
+import time
 # Limit threads for pyKDTREE and CHOLMOD 
 os.environ["OMP_NUM_THREADS"] = "1" 
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -99,6 +100,8 @@ class Cloth:
         self.warning = False #for displaying the warning
         self.cusick = False
         self.from_unity = False
+        self.table = False
+        self.lastTime = 0
 
         #controled nodes
         self.control = [] #for precomputing cholesky factorizations and only updating when necessary
@@ -855,12 +858,13 @@ class Cloth:
     @profile
     def floorCollisions(self,phi):
         phi_mat = phi.reshape((self.n_verts, 3), order='F').copy()
-        ind_col = np.nonzero(phi_mat[:,2] < -2*self.cusick)[0]
+        ind_col = np.nonzero(phi_mat[:,2] < -2*(self.cusick|self.table))[0]
         self.flr = False #bookeeping if floor collisions occurred
         if ind_col.shape[0] > 0:
             self.flr = True
             #normal forces
-            norm_Fn = self.nodes_faces_count[ind_col]*np.abs(phi_mat[ind_col,2]) #normal force 
+            #norm_Fn = self.nodes_faces_count[ind_col]*np.abs(phi_mat[ind_col,2]) #normal force 
+            norm_Fn = np.abs(phi_mat[ind_col,2]) #normal force 
             phi_mat[ind_col,2] = 0 #orthogonal projection to the floor
             #friction
             vt = (self.positions[ind_col] - phi_mat[ind_col]) #tangent friction direction per node 
@@ -871,7 +875,7 @@ class Cloth:
             phi = phi_mat.flatten(order='F') #update positions
         return phi
     
-    def testCollisions(self, phi):
+    def cusickCollisions(self, phi):
         phi_mat = phi.reshape((self.n_verts, 3), order='F').copy()
         ind_col = np.nonzero((phi_mat[:,2] < 0) & (self.original_pos[:, 0] ** 2 + self.original_pos[:, 1] ** 2 <= 0.1))[0]
         self.flr = False #bookeeping if floor collisions occurred
@@ -885,6 +889,107 @@ class Cloth:
             vt[:,2] = 0; #project on the floor   
             #spread the forces 
             phi = phi_mat.flatten(order='F') #update positions
+        return phi
+    
+    def addTable(self,center,dimensions,mu):
+        if self.from_unity:
+            center = self.fromAddressToArray(center, 3, ctypes.c_float)
+            dimensions = self.fromAddressToArray(dimensions, 3, ctypes.c_float)
+
+        self.table = True
+        self.mu_table = mu
+        self.table_center = np.array(center)
+        self.table_half_size = np.array(dimensions)/2
+        self.box_min = self.table_center - self.table_half_size
+        self.box_max = self.table_center + self.table_half_size
+        cx, cy, cz = self.table_center
+        hx, hy, hz = 0.95*self.table_half_size
+
+        # Vertices: 8 corners of the rectangular table box
+        self.table_vertices = np.array([
+            [cx - hx, cy - hy, cz - hz],  # 0
+            [cx + hx, cy - hy, cz - hz],  # 1
+            [cx + hx, cy + hy, cz - hz],  # 2
+            [cx - hx, cy + hy, cz - hz],  # 3
+
+            [cx - hx, cy - hy, cz + hz],  # 4
+            [cx + hx, cy - hy, cz + hz],  # 5
+            [cx + hx, cy + hy, cz + hz],  # 6
+            [cx - hx, cy + hy, cz + hz],  # 7
+        ])
+
+        # Quadrilateral faces
+        self.table_faces = np.array([
+            [0, 3, 2, 1],  # bottom
+            [7, 6, 5, 4],  # top
+
+            [0, 1, 5, 4],  # front, y-
+            [3, 7, 6, 2],  # back, y+
+
+            [0, 4, 7, 3],  # left, x-
+            [1, 2, 6, 5],  # right, x+
+        ], dtype=int)
+        if self.polyscoped is False:
+            self.preparePolyscope()
+        ps.register_surface_mesh("Table", self.table_vertices, self.table_faces, smooth_shade=True, edge_width = 1)
+
+    
+    @profile
+    def tableCollisions(self,phi):    
+        phi_mat = phi.reshape((-1, 3), order="F")
+        p = phi_mat.copy()
+
+        # Is particle center inside the box?
+        inside = np.all((p >= self.box_min) & (p <= self.box_max), axis=1)
+
+        # --------------------------------------------------
+        # Case 1: particle center is outside the box
+        # --------------------------------------------------
+        closest = np.clip(p, self.box_min, self.box_max)
+
+        direction = p - closest
+        dist = self.computeNorm(direction) 
+
+        outside_hit = (~inside) & (dist < self.rad)
+
+        if np.any(outside_hit):
+            n = direction[outside_hit] / dist[outside_hit, None]
+            p[outside_hit] = closest[outside_hit] + n * self.rad
+
+        # --------------------------------------------------
+        # Case 2: particle center is inside the box
+        # Push it to the nearest face, plus radius.
+        # --------------------------------------------------
+        if np.any(inside):
+            p_inside = p[inside]
+
+            dist_to_min = p_inside - self.box_min
+            dist_to_max = self.box_max - p_inside
+
+            distances = np.concatenate([dist_to_min, dist_to_max], axis=1)
+            closest_face = np.argmin(distances, axis=1)
+
+            corrected = p_inside.copy()
+
+            for i, face in enumerate(closest_face):
+                if face < 3:
+                    axis = face
+                    corrected[i, axis] = self.box_min[axis] - self.rad
+                else:
+                    axis = face - 3
+                    corrected[i, axis] = self.box_max[axis] + self.rad
+
+            p[inside] = corrected
+        #friction
+        dlt_phi = p - phi_mat
+        nu_mat = dlt_phi.reshape((self.n_verts, 3), order='F')
+        norm_Fn = self.computeNorm(nu_mat)
+        nu = nu_mat/(norm_Fn[:,np.newaxis] + 1e-12)
+        v = self.positions - p
+        vt = v - (self.innerProduct(v,nu)[:,np.newaxis])*nu 
+        #compute friction force vector
+        F_mu = self.frictionForce(self.mu_table,norm_Fn,vt,cap = True)
+        phi += (dlt_phi + F_mu).flatten(order="F") 
         return phi
 
     def frictionForce(self,mu,Fn,vt,cap = True):
@@ -1218,6 +1323,7 @@ class Cloth:
 
     @profile
     def simulate(self, u, control, l=None):
+        start_time = time.time()
         if self.from_unity:
             u = self.fromAddressToArray(u, l*3, ctypes.c_float)
             control = self.fromAddressToArray(control, l, ctypes.c_int32)
@@ -1267,7 +1373,10 @@ class Cloth:
 
             #object collision
             if self.cusick:
-                phi = self.testCollisions(phi)
+                phi = self.cusickCollisions(phi)
+            #table collision
+            if self.table:
+                phi = self.tableCollisions(phi)
 
 
             #update internal cloth variables
@@ -1285,3 +1394,4 @@ class Cloth:
         if self.total_iters/(len(self.history_pos)-1) > 4 and self.warning == False:
            print("WARNING: average of more than 4 iterations taken, for better performance reduce dt or increase thck")
            self.warning = True
+        self.lastTime = time.time()-start_time

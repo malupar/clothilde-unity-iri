@@ -9,19 +9,30 @@ public class PythonConnection : MonoBehaviour
 {
 
     // Dependencies for conda env
-    public const string CondaEnvPath = @"C:\Users\maparicio\miniconda3\envs\cholmod_env";
-    public const string PythonDllName = "python311.dll";
-    public const string PythonScripts = @"C:\Users\maparicio\Documents\My project\Assets\Scripts";
+    // public const string CondaEnvPath = @"C:\Users\maparicio\miniconda3\envs\cholmod_env";
+    // public const string PythonDllName = "python311.dll";
+    // public const string PythonScripts = @"C:\Users\maparicio\Documents\My project\Assets\Scripts";
 
     // public const string CondaEnvPath = @"C:\Users\abhil\miniconda3\envs\clothilde_env";
     // public const string PythonDllName = "python311.dll";
     // public const string PythonScripts = @"Z:\vs\clothilde-unity-iri\Assets\Scripts";
 
+    public const string CondaEnvPath = @"C:\Users\apari\miniconda3\envs\cholmod_env";
+    public const string PythonDllName = "python311.dll";
+    public const string PythonScripts = @"C:\Users\apari\Documents\GitHub\clothilde-unity-iri\Assets\Scripts";
 
     private dynamic meshPython;
     private dynamic clothModule;
 
     private TriangleMesh mesh;
+
+    private float[] V3ToArray(Vector3 vector) {
+        float[] floatArray = new float[3];
+        floatArray[0] = vector.x;
+        floatArray[1] = vector.z;
+        floatArray[2] = vector.y;
+        return floatArray;
+    }
 
     public PythonConnection(TriangleMesh triangleMesh)
     {
@@ -96,6 +107,8 @@ public class PythonConnection : MonoBehaviour
                 //                                   shr: mesh.shr, 
                 //                                   str: mesh.str);
 
+                GameObject targetObj = GameObject.Find("Table");
+                Table table = targetObj.GetComponent<Table>();
                 meshPython.setSimulatorParameters(dt: mesh.dt,
                                                 //numIterSmooth: mesh.numIter,
                                                   sub_steps: mesh.sub_steps,
@@ -113,6 +126,22 @@ public class PythonConnection : MonoBehaviour
                                                   slf: mesh.slf,
                                                   cusick: mesh.testCusick,
                                                   from_unity: true);
+
+                if (table.generateTable) {
+                    float[] dimensions = V3ToArray(table.dimensions);
+                    Vector3 tablePos = new Vector3(
+                        mesh.transform.position.x + mesh.gridWidth/2,
+                        mesh.transform.position.y - dimensions[2]/2,
+                        mesh.transform.position.z + mesh.gridHeight/2
+                    );
+
+                    float[] offset = V3ToArray(tablePos + table.offset);
+                    GCHandle oHandle = GCHandle.Alloc(offset, GCHandleType.Pinned);
+                    long oPtr = (long)oHandle.AddrOfPinnedObject();
+                    GCHandle dHandle = GCHandle.Alloc(dimensions, GCHandleType.Pinned);
+                    long dPtr = (long)dHandle.AddrOfPinnedObject();
+                    meshPython.addTable(center: oPtr, dimensions: dPtr, mu: table.mu);
+                }
             }
         }
         catch (PythonException e) {

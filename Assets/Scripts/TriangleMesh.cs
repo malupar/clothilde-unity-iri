@@ -3,6 +3,7 @@ using Python.Runtime;
 using System.Runtime.InteropServices;
 using System;
 using System.IO;
+using System.Text;
 using System.Collections.Generic;
 // using System.Numerics;
 
@@ -35,7 +36,6 @@ public class TriangleMesh : MonoBehaviour
     public float thck = 1.2f;
     public int smooth = 2;
     public float slf = 1e-4f;
-    public bool testCusick = true;
 
     // Mesh objects
     private Mesh meshUnity;
@@ -63,7 +63,14 @@ public class TriangleMesh : MonoBehaviour
     // interpolation between current and target positions
     private Dictionary<int, Vector3> previousControlTargets = new Dictionary<int, Vector3>();
 
-
+    //Options
+    public bool testCusick = true;
+    public bool profiling = true;
+    private string exportPath = @"C:\Users\apari\Documents\GitHub\clothilde-unity-iri\Assets\Exports";
+    private bool isExporting = true;
+    private List<float> elapsedTime;
+    private List<float> simulateTime;
+    
     // containeer describing possible grasp point on cloth
     public struct GraspCandidate
 {
@@ -312,6 +319,8 @@ public class TriangleMesh : MonoBehaviour
         CreateGrid();
         // Unity makes the mesh first, then prepares the Python
         // simulation object that will control/update that mesh
+        elapsedTime = new List<float>();
+        simulateTime = new List<float>();
         connection = new PythonConnection(this);
         connection.InitializePython();
         meshPython = connection.ImportClothScript();
@@ -477,10 +486,30 @@ public class TriangleMesh : MonoBehaviour
             previousControlTargets.Remove(idx);
     }
 
+    private void saveProfiling() {
+        string sessionFolder = Path.Combine(exportPath, "Session_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        if (!Directory.Exists(sessionFolder)) Directory.CreateDirectory(sessionFolder);
+        StringBuilder timeS = new StringBuilder("T,Elapsed,Simulate\n");
+        for (int i = 0; i < elapsedTime.Count; ++i) {
+            string line = $"{i}," + $"{elapsedTime[i]}," + $"{simulateTime[i]}";
+            timeS.AppendLine(line);
+        }
+        File.WriteAllText(Path.Combine(sessionFolder, "export.csv"), timeS.ToString());
+    }
+
     void Update() {
         if (meshPython == null) {
             return;
         }
+         if (Input.GetKeyDown(KeyCode.T))
+        {
+            if (isExporting) {
+                isExporting = false;
+                saveProfiling();
+            }
+            else isExporting = true;
+        }
+
         // Debug.Log("Se actualiza la tela");
         float d = Time.deltaTime;
         // Debug.Log("Ultima llamada hace: " + d);
@@ -493,49 +522,12 @@ public class TriangleMesh : MonoBehaviour
             positions.Add(V3ToArray(x.Value));
         }
 
-// UPDATED: 
-// Old version: Used visual mesh position at the start (meshUnity.vertices[nodeIndex]) to new target;
-// This created problems since at every iteration, new position may not be the same as the visual one.
-// New version: Interpolates previous commanded target to new target.
-
         int[] control = controlNodes.ToArray();
         int nums = positions.Count;
         float[] pos = new float[nums*3];
 
         GCHandle cHandle = GCHandle.Alloc(control, GCHandleType.Pinned);
         long cPtr = (long)cHandle.AddrOfPinnedObject();
-
-        // for (int i = 0; i < nums; ++i)
-        //  {
-        //      int nodeIndex = control[i];
-
-        //      if (!previousControlTargets.ContainsKey(nodeIndex))
-        //      {
-        //          previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
-        //      }
-        // }
-
-        // for (int it = 0; it < numIter; ++it)
-        // {
-        // for (int i = 0; i < nums; ++i)
-        // {
-        //     int nodeIndex = control[i];
-
-        //     Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
-        //     Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
-
-        //     // // Python style
-        //     float[] p = V3ToArray(startWorld);
-        //     float[] target = V3ToArray(targetWorld);
-
-        //     float s = (float)(it + 1) / numIter;
-
-        //     for (int j = 0; j < 3; ++j)
-        //     {
-        //         pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
-        //         // pos[i * 3 + j] = positions[i][j];
-        //     }
-        //     }
 
         for (int i = 0; i < nums; ++i)
         {
@@ -548,7 +540,17 @@ public class TriangleMesh : MonoBehaviour
         GCHandle vHandle = GCHandle.Alloc(pos, GCHandleType.Pinned);
         long vPtr = (long)vHandle.AddrOfPinnedObject();
 
+        float d1 = Time.deltaTime;
         meshPython.simulate(vPtr, cPtr, nums);
+        float d2 = Time.deltaTime;
+        float tPython = meshPython.lastTime;
+        // Debug.Log("Conexion+simulate con Python tarda " + d2);
+        // Debug.Log("Simulate con Python tarda " + tPython);
+
+        if (isExporting) {
+            elapsedTime.Add(d2);
+            simulateTime.Add(tPython);
+        }
 
         vHandle.Free();
         cHandle.Free();
