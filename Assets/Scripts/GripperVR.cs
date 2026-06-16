@@ -10,6 +10,7 @@ public class GripperVR : MonoBehaviour
     [Header("Grasp frame")]
     public Transform graspFrame;
     public Vector3 controllerLocalOffset = new Vector3(0.0f, 0.0f, 0.2f);
+    public Quaternion controllerOrientation = new Quaternion(0.5f, -0.5f, 0.5f, 0.5f);
 
     [Header("Grasp box visual")]
     public Transform graspBoxVisual;
@@ -50,6 +51,7 @@ public class GripperVR : MonoBehaviour
         m_Joint = GetComponent<FixedJoint>();
 
         graspFrame.localPosition = controllerLocalOffset;
+        graspFrame.localRotation = controllerOrientation;
 
         graspBoxVisual.localPosition = Vector3.zero;
         graspBoxVisual.localScale = graspBoxSize;

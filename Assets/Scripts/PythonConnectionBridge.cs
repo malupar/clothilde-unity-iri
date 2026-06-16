@@ -18,7 +18,9 @@ public class PythonConnectionBridge : MonoBehaviour
     // public const string CondaEnvPath = @"C:\Users\abhil\miniconda3\envs\clothilde_env";
     // public const string PythonDllName = "python311.dll";
     // public const string PythonScripts = @"Z:\vs\clothilde-unity-iri\Assets\Scripts";
-    // public const string ClothildeSimPythonCode = @"Z:\IRI_2026\clothilde-sim\python_code";  
+    // public const string ClothildeSimPythonCode = @"Z:\
+    // 
+    // _2026\clothilde-sim\python_code";  
 
 
     private dynamic meshPython;
