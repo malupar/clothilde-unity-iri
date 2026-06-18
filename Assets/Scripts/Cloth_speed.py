@@ -119,6 +119,27 @@ class Cloth:
         self.total_iters = 0
         self.warning = False
 
+    def simulate_to_pointer(self, vPtr, cPtr, nums, outPtr, total_vertices, smooth):
+        self.simulate(vPtr, cPtr, nums)
+        
+        BufferType = ctypes.c_float * (total_vertices * 3)
+        c_array = BufferType.from_address(outPtr)
+        unity_view = np.frombuffer(c_array, dtype=np.float32).reshape((total_vertices, 3))
+        
+        phi_all = self.Am@self.positions
+        for _ in range(smooth):
+            phi_all = self.S@phi_all
+        np.copyto(unity_view, phi_all.astype(np.float32))
+
+    def deleteNotNeeded(self):
+        delattr(self, 'D')
+        delattr(self, 'M')
+        delattr(self, 'A0')
+        delattr(self, 'A1')
+        delattr(self, 'A2')
+        delattr(self, 'M_lum')
+        delattr(self, 'reference_element')
+
     def __repr__(self):
         return f"Cloth({self.n_verts} vertices, {self.faces.shape[0]} quads)"
     
@@ -837,6 +858,8 @@ class Cloth:
         self.F_z = self.half_dt2_Fg[:,2].toarray().flatten(order='F')
         self.rho_M_plus_dt_D = (self.rho_M + self.dt*self.D).tocsr()
         self.E_aux = (self.rho_M + 0.5*self.dt*self.D - 0.25*(self.dt**2)*K).tocsr()
+
+        self.deleteNotNeeded()
 
     def unionMask(self,a,b):
         self.mask_col[:] = False         # reset without reallocating

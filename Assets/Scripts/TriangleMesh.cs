@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 // using System.Numerics;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
@@ -70,6 +71,10 @@ public class TriangleMesh : MonoBehaviour
     private bool isExporting = true;
     private List<float> elapsedTime;
     private List<float> simulateTime;
+
+    private float[] flatOutputPositions;
+    private GCHandle outputBufferHandle;
+    private IntPtr rawOutputPointer;
     
     // containeer describing possible grasp point on cloth
     public struct GraspCandidate
@@ -309,7 +314,10 @@ public class TriangleMesh : MonoBehaviour
         meshUnity.RecalculateNormals(); 
         meshUnity.RecalculateBounds();
         meshFilter.mesh = meshUnity;
-        // Debug.Log($"Grid created: {numVertexWidth} x {numVertexHeight}");
+
+        flatOutputPositions = new float[N * 3];
+        outputBufferHandle = GCHandle.Alloc(flatOutputPositions, GCHandleType.Pinned);
+        rawOutputPointer = outputBufferHandle.AddrOfPinnedObject();
 
         CreateHandle();
     }
@@ -324,6 +332,17 @@ public class TriangleMesh : MonoBehaviour
         connection = new PythonConnection(this);
         connection.InitializePython();
         meshPython = connection.ImportClothScript();
+
+        PythonEngine.BeginAllowThreads();
+    }
+
+    void OnDestroy()
+    {
+        // Always clean up pinned allocations when the script destroys to prevent memory leaks
+        if (outputBufferHandle.IsAllocated)
+        {
+            outputBufferHandle.Free();
+        }
     }
 
     // Distintos ejes de coord.
@@ -364,7 +383,7 @@ public class TriangleMesh : MonoBehaviour
         numFaces = (numVertexHeight-1)*(numVertexWidth-1)*8;
         int cnt = 0, cntF = 0, diff = numVertexHeight*numVertexWidth;
         int[,] faces = new int[numFaces, 3];
-        // Debug.Log("Numero caras: " + numFaces);
+
         for (int i = 0; i < numVertexWidth-1; ++i) {
             for (int j = 0; j < numVertexHeight-1; ++j) {
                 faces[cnt,0] = i*numVertexHeight+j; // LD
@@ -441,18 +460,24 @@ public class TriangleMesh : MonoBehaviour
             textureChanged = true;
         }
 
-        float[][] pos = meshPython.getPositionsUnity(smooth).AsManagedObject(typeof(float[][])) as float[][];
+        float[] localFloatArray = flatOutputPositions;        
         Vector3[] meshVertices = new Vector3[N];
         Vector2[] uv = new Vector2[N];
         for (int i = 0; i < N; ++i) {
-            meshVertices[i] = ArrayToV3(pos[i]);
+            meshVertices[i].x = localFloatArray[i*3 + 0];
+            meshVertices[i].z = localFloatArray[i*3 + 1];
+            meshVertices[i].y = localFloatArray[i*3 + 2] + 1;
         }
         if (doubleSided) {
             meshVertices = new Vector3[2*N];
             uv = new Vector2[2*N];
             for (int i = 0; i < N; ++i) {
-                meshVertices[i] = ArrayToV3(pos[i]);
-                meshVertices[i+N] = ArrayToV3(pos[i]);
+                meshVertices[i].x = localFloatArray[i*3 + 0];
+                meshVertices[i].z = localFloatArray[i*3 + 1];
+                meshVertices[i].y = localFloatArray[i*3 + 2] + 1;
+                meshVertices[i+N].x = localFloatArray[i*3 + 0];
+                meshVertices[i+N].z = localFloatArray[i*3 + 1];
+                meshVertices[i+N].y = localFloatArray[i*3 + 2] + 1;
 
                 if (textureChanged) {
                     uv[i] = new Vector2(0.0f, 0.0f);
@@ -466,7 +491,6 @@ public class TriangleMesh : MonoBehaviour
         meshUnity.RecalculateBounds();
 
         for (int i = 0; i < numHandles; ++i) {
-            // Debug.Log(meshVertices[handles[i].nodeIndex]);
             updateHanldePosition(i, meshVertices[handles[i].nodeIndex]);
         }
 
@@ -510,9 +534,6 @@ public class TriangleMesh : MonoBehaviour
             else isExporting = true;
         }
 
-        // Debug.Log("Se actualiza la tela");
-        float d = Time.deltaTime;
-        // Debug.Log("Ultima llamada hace: " + d);
         List<float[]> positions = new List<float[]>();
         List<int> controlNodes = new List<int>();
         
@@ -540,13 +561,13 @@ public class TriangleMesh : MonoBehaviour
         GCHandle vHandle = GCHandle.Alloc(pos, GCHandleType.Pinned);
         long vPtr = (long)vHandle.AddrOfPinnedObject();
 
-        float d1 = Time.deltaTime;
-        meshPython.simulate(vPtr, cPtr, nums);
-        float d2 = Time.deltaTime;
-        float tPython = meshPython.lastTime;
-        // Debug.Log("Conexion+simulate con Python tarda " + d2);
-        // Debug.Log("Simulate con Python tarda " + tPython);
+        long outPtr = (long)rawOutputPointer;
 
+        float tPython = 0;
+        float d1 = Time.deltaTime;
+        meshPython.simulate_to_pointer(vPtr, cPtr, nums, outPtr, N, smooth);
+        float d2 = Time.deltaTime;
+        tPython = (float)meshPython.lastTime;
         if (isExporting) {
             elapsedTime.Add(d2);
             simulateTime.Add(tPython);
@@ -554,7 +575,6 @@ public class TriangleMesh : MonoBehaviour
 
         vHandle.Free();
         cHandle.Free();
-
         loadPositionsFromMesh();
     }
 }
