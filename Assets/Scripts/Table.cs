@@ -29,7 +29,7 @@ public class Table : MonoBehaviour
         }
 
 
-        float meshTopY = targetRenderer.bounds.max.y;
+        float meshTopY = mesh.originPosition.y;
 
         Vector3 newPosition = new Vector3(
             targetObj.transform.position.x + mesh.gridWidth/2,

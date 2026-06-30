@@ -20,11 +20,21 @@ public class TriangleMesh : MonoBehaviour
     public bool doubleSided = true;
     public bool allHandles = true;
 
+    public enum ClothType{
+        Type1,
+        Type2,
+        Personalize
+    };
+
     //Runtime modifiable parameters
     public int sub_steps = 8;
     // public int numIter = 1;
     public float dt = 1f/60f;
     public float tol = 0.008f;
+    public ClothType typeCloth = ClothType.Personalize;
+
+
+    // Physical parameters
     public float rho = 0.1f;
     public float delta = 0.1f;
     public float alpha = 0.3f;
@@ -253,6 +263,7 @@ public class TriangleMesh : MonoBehaviour
         }
     }
 
+    // Creates and fills meshUnity object
     void CreateGrid() {
         meshFilter = GetComponent<MeshFilter>();
         meshUnity = new Mesh();
@@ -270,7 +281,7 @@ public class TriangleMesh : MonoBehaviour
             for (int y = 0; y < numVertexHeight; y++) {
                 float posX = x, posY = y;
                 posX /= (numVertexWidth-1); posY /= (numVertexHeight-1);
-                Vector3 worldPos = originPosition + new Vector3(posX*gridWidth, 1, posY*gridHeight);
+                Vector3 worldPos = originPosition + new Vector3(posX*gridWidth, 0, posY*gridHeight);
 
                 vertices[cnt] = worldPos;
                 uv[cnt] = new Vector2(posX, posY);
@@ -288,7 +299,7 @@ public class TriangleMesh : MonoBehaviour
                 float posX = x, posY = y;
                 posX -= 0.5f; posY -= 0.5f;
                 posX /= (numVertexWidth-1); posY /= (numVertexHeight-1);
-                Vector3 worldPos = originPosition + new Vector3(posX*gridWidth, 1, posY*gridHeight);
+                Vector3 worldPos = originPosition + new Vector3(posX*gridWidth, 0, posY*gridHeight);
                 
                 uv[cnt] = new Vector2(posX, posY);
                 uv[cnt] = new Vector2(1, 1);
@@ -322,8 +333,38 @@ public class TriangleMesh : MonoBehaviour
         CreateHandle();
     }
 
+    // Prefills physical parameters for a specific cloth
+    void LoadClothType() {
+        if (typeCloth == ClothType.Type1) {
+            rho = 0.1f;
+            delta = 0.1f;
+            alpha = 0.3f;
+            kappa = 0.0001f;
+            kappa_bnd = 1e-5f;
+            str = 0.0001f;
+            shr = 0.0002f;
+            mu_f = 0.2f;
+            mu_s = 0.5f;
+            thck = 1.2f;
+            slf = 0.0001f;
+        } else if (typeCloth == ClothType.Type2) {
+            rho = 0.1f;
+            delta = 0.1f;
+            alpha = 0.3f;
+            kappa = 0.0005f;
+            kappa_bnd = 5e-5f;
+            str = 0.0001f;
+            shr = 0.0002f;
+            mu_f = 0.2f;
+            mu_s = 0.5f;
+            thck = 0.9f;
+            slf = 0.0005f;
+        }
+    }
+
     void Awake() {
         simulated = new Dictionary<int, Vector3>();
+        LoadClothType();
         CreateGrid();
         // Unity makes the mesh first, then prepares the Python
         // simulation object that will control/update that mesh
@@ -350,14 +391,14 @@ public class TriangleMesh : MonoBehaviour
         float[] floatArray = new float[3];
         floatArray[0] = vector.x;
         floatArray[1] = vector.z;
-        floatArray[2] = vector.y-1;
+        floatArray[2] = vector.y;
         return floatArray;
     }
 
     private Vector3 ArrayToV3(float[] vector) {
         Vector3 position;
         position.x = vector[0];
-        position.y = vector[2]+1;
+        position.y = vector[2];
         position.z = vector[1];
         return position;
     }
@@ -466,7 +507,7 @@ public class TriangleMesh : MonoBehaviour
         for (int i = 0; i < N; ++i) {
             meshVertices[i].x = localFloatArray[i*3 + 0];
             meshVertices[i].z = localFloatArray[i*3 + 1];
-            meshVertices[i].y = localFloatArray[i*3 + 2] + 1;
+            meshVertices[i].y = localFloatArray[i*3 + 2];
         }
         if (doubleSided) {
             meshVertices = new Vector3[2*N];
@@ -474,10 +515,10 @@ public class TriangleMesh : MonoBehaviour
             for (int i = 0; i < N; ++i) {
                 meshVertices[i].x = localFloatArray[i*3 + 0];
                 meshVertices[i].z = localFloatArray[i*3 + 1];
-                meshVertices[i].y = localFloatArray[i*3 + 2] + 1;
+                meshVertices[i].y = localFloatArray[i*3 + 2];
                 meshVertices[i+N].x = localFloatArray[i*3 + 0];
                 meshVertices[i+N].z = localFloatArray[i*3 + 1];
-                meshVertices[i+N].y = localFloatArray[i*3 + 2] + 1;
+                meshVertices[i+N].y = localFloatArray[i*3 + 2];
 
                 if (textureChanged) {
                     uv[i] = new Vector2(0.0f, 0.0f);

@@ -881,7 +881,7 @@ class Cloth:
     @profile
     def floorCollisions(self,phi):
         phi_mat = phi.reshape((self.n_verts, 3), order='F').copy()
-        ind_col = np.nonzero(phi_mat[:,2] < -2*(self.cusick|self.table))[0]
+        ind_col = np.nonzero(phi_mat[:,2] < 0)[0]
         self.flr = False #bookeeping if floor collisions occurred
         if ind_col.shape[0] > 0:
             self.flr = True
@@ -900,12 +900,12 @@ class Cloth:
     
     def cusickCollisions(self, phi):
         phi_mat = phi.reshape((self.n_verts, 3), order='F').copy()
-        ind_col = np.nonzero((phi_mat[:,2] < 0) & (self.original_pos[:, 0] ** 2 + self.original_pos[:, 1] ** 2 <= 0.1))[0]
+        ind_col = np.nonzero((phi_mat[:,2] < 1) & (self.original_pos[:, 0] ** 2 + self.original_pos[:, 1] ** 2 <= 0.1))[0]
         self.flr = False #bookeeping if floor collisions occurred
         if ind_col.shape[0] > 0:
             self.flr = True
             #normal forces
-            norm_Fn = self.nodes_faces_count[ind_col]*np.abs(phi_mat[ind_col,2]) #normal force 
+            norm_Fn = self.nodes_faces_count[ind_col]*np.abs(phi_mat[ind_col,2]-1) #normal force 
             phi_mat[ind_col,2] = 0 #orthogonal projection to the floor          
             #friction
             vt = (self.positions[ind_col] - phi_mat[ind_col]) #tangent friction direction per node 

@@ -1,7 +1,7 @@
 import pandas as pd 
 import matplotlib.pyplot as plt
 
-folder_path = 'C:\\Users\\apari\\Documents\\Github\\clothilde-unity-iri\\Assets\\Exports\\Session_20260618_135645\\'
+folder_path = 'C:\\Users\\apari\\Documents\\Github\\clothilde-unity-iri\\Assets\\Exports\\Session_20260630_010902\\'
 file_path = folder_path + "export.csv"
 df = pd.read_csv(file_path)
 
