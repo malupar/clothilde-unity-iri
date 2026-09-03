@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GripperBridge : MonoBehaviour
+public class GripperBridgeBox : MonoBehaviour
 {
     [Header("Cloth")]
     public TriangleMeshBridge cloth;
@@ -19,48 +19,22 @@ public class GripperBridge : MonoBehaviour
     public Transform graspBoxVisual;
     public Vector3 graspBoxSize = new Vector3(0.04f, 0.04f, 0.04f);
 
-    [Header("Visual gripper assembly")]
-    public Assembly gripperAssembly;
-    public float gripperAssemblyScale = 0.04f; // same scale as in the parts heirarchy
-    // Distance from grasp box center to CAD gripper root.
-    // Equivalent to using the opposite of Python tip_center_local.
-
-    // public float gripperOffset = 0.032f;
-    public float gripperOffset = 0.06f;
-
-    // Usually try +t first. If it appears on the wrong side, use -t.
-    public Vector3 gripperAssemblyOffsetDirection = new Vector3(0.0f, 1.0f, 0.0f);
-
     public bool IsClosed { get; private set; } = false;
-
-    private Dictionary<int, GameObject> graspMarkers =
-        new Dictionary<int, GameObject>();
 
     void Awake()
     {
         // The Gripper object itself is the grasp box center.
-        // IMPORTANT: After adding base and jaws in Unity as gameobjects under
-        // Assembly, iy is important to set their positions there as (0, 0, 0)
-        // and scale as (0.04, 0.04, 0.04)
         transform.position = initialBoxCenter;
-        // transform.rotation = Quaternion.identity;
+        transform.rotation = Quaternion.identity;
 
         // Visual box used to show the grasp region.
         if (graspBoxVisual != null)
         {
             graspBoxVisual.localPosition = Vector3.zero;
-            // graspBoxVisual.localRotation = Quaternion.identity;
+            graspBoxVisual.localRotation = Quaternion.identity;
             graspBoxVisual.localScale = graspBoxSize;
         }
 
-        // CAD gripper assembly, shifted relative to the grasp box.
-        if (gripperAssembly != null)
-        {
-            // float t =  52 * gripperAssemblyScale - graspBoxSize.y / 2;
-            gripperAssembly.transform.localPosition = gripperAssemblyOffsetDirection * gripperOffset;
-            // gripperAssembly.transform.localRotation = Quaternion.identity;
-            gripperAssembly.transform.localScale = Vector3.one * gripperAssemblyScale;
-        }
     }
 
     void Update()
@@ -79,11 +53,6 @@ public class GripperBridge : MonoBehaviour
         {
             IsClosed = true;
 
-            if (gripperAssembly != null)
-            {
-                gripperAssembly.Close();
-            }
-
             Debug.Log("G pressed: Python gripper closed.");
         }
 
@@ -91,27 +60,10 @@ public class GripperBridge : MonoBehaviour
         {
             IsClosed = false;
 
-            if (gripperAssembly != null)
-            {
-                gripperAssembly.Open();
-            }
-
             Debug.Log("R pressed: Python gripper opened.");
         }
 
-        if (cloth != null)
-        {
-            // send gripper pose and jaw status to Python
-            cloth.StepGripperFromUnity(
-                GetInstanceID(),
-                transform.position,
-                transform.rotation,
-                graspBoxSize,
-                IsClosed
-            );
-
-            // RenderGraspedNodes(cloth.LastGraspedNodeIds);
-        }
+        StepPythonOnce();
     }
 
     void TranslateBoxWithKeyboard()
@@ -190,39 +142,17 @@ public class GripperBridge : MonoBehaviour
         }
     }
 
+    void StepPythonOnce()
+    {
+        if (cloth == null)
+            return;
 
-//     void RenderGraspedNodes(int[] nodeIds)
-//     {
-//         HashSet<int> live = new HashSet<int>(nodeIds);
-
-//         List<int> toRemove = new List<int>();
-
-//         foreach (var kv in graspMarkers)
-//         {
-//             if (!live.Contains(kv.Key))
-//             {
-//                 Destroy(kv.Value);
-//                 toRemove.Add(kv.Key);
-//             }
-//         }
-
-//         foreach (int id in toRemove)
-//         {
-//             graspMarkers.Remove(id);
-//         }
-
-//         foreach (int id in live)
-//         {
-//             if (!graspMarkers.ContainsKey(id))
-//             {
-//                 GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-//                 marker.name = "PythonGraspedNode_" + id;
-//                 marker.transform.localScale = Vector3.one * 0.015f;
-//                 graspMarkers[id] = marker;
-//             }
-
-//             graspMarkers[id].transform.position = cloth.GetNodeWorldPosition(id);
-//         }
-// }
-
+        cloth.StepGripperFromUnity(
+            GetInstanceID(),
+            transform.position,
+            transform.rotation,
+            graspBoxSize,
+            IsClosed
+        );
+    }
 }

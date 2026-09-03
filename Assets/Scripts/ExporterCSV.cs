@@ -5,26 +5,23 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-public class ExporterBridge : MonoBehaviour
+public class ExporterCSV : MonoBehaviour
 {
     [Header("Export")]
-    // public string exportFolder = @"C:\Users\maparicio\Documents\clothilde-sim\python_code\exported_data4";
-
-    public string exportFolder = @"Z:\IRI_2026\clothilde-sim\python_code\exported_data3_box";
+    public string exportFolder = @"Z:\IRI_2026\clothilde-sim\python_code\exported_data3";
 
     [Header("Scene references")]
-    public TriangleMeshBridge cloth;
+    public TriangleMesh cloth;
 
     private bool isExporting = false;
     private int frame = 0;
     private float recordingStartTime = 0.0f;
 
     private StringBuilder clothFrames;
+    private StringBuilder clothVelocities;
 
     // Gripper data
-    public GripperBridgeBox[] grippers;
-    // public GripperBridge[] grippers;
-    public GripperVRBridge[] vrGrippers;
+    public Gripper gripper;
     private StringBuilder gripperPoses;
 
     void Awake()
@@ -45,29 +42,13 @@ public class ExporterBridge : MonoBehaviour
                 StopRecordingAndSave();
             }
         }
+
         if (isExporting)
         {
-            // Save cloth node positions at every frame and fixed time intervals
+            // Save cloth node positions at every frame
             RecordFrame();
             frame++;
         }
-
-        // // Limitation: This records the latest available simulated state at each sampling instant. 
-        // // It does not force Unity/Python to physically simulate exactly at 0, 1/60, 2/60, etc.
-        // if (!isExporting)
-        //     return;
-
-        // float elapsed = Time.time - recordingStartTime;
-
-        // if (elapsed >= nextSampleTime)
-        // {
-        //     RecordFrame(sampleIndex, nextSampleTime);
-
-        //     sampleIndex++;
-        //     frame = sampleIndex;
-
-        //     nextSampleTime = sampleIndex * exportDt;
-        // }
     }
 
     void StartRecording()
@@ -82,7 +63,8 @@ public class ExporterBridge : MonoBehaviour
         ExportSimulatorParametersOnce();
 
         clothFrames = new StringBuilder("frame,t,node_index,x,y,z\n"); // header
-        gripperPoses = new StringBuilder("frame,t,gripper_id,px,py,pz,qw,qx,qy,qz,jaw_open\n");
+        clothVelocities = new StringBuilder("frame,t,node_index,vx,vy,vz\n");
+        gripperPoses = new StringBuilder("frame,t,px,py,pz,qw,qx,qy,qz,jaw_open\n");
 
         Debug.Log("Cloth export started. Press P again to stop and save.");
     }
@@ -93,6 +75,11 @@ public class ExporterBridge : MonoBehaviour
 
         File.WriteAllText(
             Path.Combine(exportFolder, "cloth_frames.csv"),
+            clothFrames.ToString()
+        );
+
+        File.WriteAllText(
+            Path.Combine(exportFolder, "cloth_velocities.csv"),
             clothFrames.ToString()
         );
 
@@ -170,7 +157,6 @@ public class ExporterBridge : MonoBehaviour
 
         float t = Time.time - recordingStartTime;
 
-
         for (int i = 0; i < n; i++)
         {
             Vector3 p = UnityPointToPython(verticesUnity[i]);
@@ -178,67 +164,35 @@ public class ExporterBridge : MonoBehaviour
         }
 
         // gripper data export
+        Transform gripperFrame = gripper.transform;
 
-        int gid = 0;
-
-        if (grippers != null)
-        {
-            foreach (GripperBridgeBox g in grippers)
-            // foreach (GripperBridge g in grippers)
-            {
-                if (g == null) continue;
-
-                RecordOneGripper(
-                    gid++,
-                    g.transform,
-                    !g.IsClosed,
-                    t
-                );
-            }
-        }
-
-        if (vrGrippers != null)
-        {
-            foreach (GripperVRBridge g in vrGrippers)
-            {
-                if (g == null) continue;
-
-                Transform frameTransform = g.graspFrame != null ? g.graspFrame : g.transform;
-
-                RecordOneGripper(
-                    gid++,
-                    frameTransform,
-                    !g.IsClosed,
-                    t                );
-            }
-        }
-
-        
-
-    }
-
-    void RecordOneGripper(
-        int gripperId,
-        Transform gripperFrame,
-        bool jawOpen,
-        float t)
-    {
         Vector3 pGripper = UnityPointToPython(gripperFrame.position);
         Vector4 qGripper = UnityQuaternionToPython(gripperFrame.rotation);
 
+        // Default to open if assembly is missing
+        int jawOpen = 1;
+
+        if (gripper.gripperAssembly != null)
+        {
+            jawOpen = gripper.gripperAssembly.IsOpen ? 1 : 0;
+        }
+
         gripperPoses.AppendLine(
-            $"{frame},{t},{gripperId}," + 
+            $"{frame},{t}," + 
             $"{pGripper.x},{pGripper.y},{pGripper.z}," +
             $"{qGripper.w}, {qGripper.x}, {qGripper.y}, {qGripper.z}," +
-            $"{(jawOpen ? 1 : 0)}"
+            $"{jawOpen}"
         );
-
     }
 
     // Unity point (x, y, z) -> clothilde-sim point (x, z, y - 1)
     Vector3 UnityPointToPython(Vector3 p)
     {
         return new Vector3(p.x, p.z, p.y - 1.0f);
+    }
+    Vector3 UnityVectorToPython(Vector3 v)
+    {
+        return new Vector3(v.x, v.z, v.y);
     }
     Vector4 UnityQuaternionToPython(Quaternion q)
     {

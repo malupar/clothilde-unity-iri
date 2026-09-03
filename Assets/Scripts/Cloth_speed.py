@@ -157,12 +157,6 @@ class Cloth:
         self.prepareMatrices()
         self.computeStretchShear()
         self.precomputeBoundaryBending()
-        
-    def getPositionsUnity(self, smooth):
-        phi_all = self.Am@self.positions
-        for _ in range(smooth):
-            phi_all = self.S@phi_all
-        return phi_all.tolist()
 
     def checkQuadMesh(self):
         pass
@@ -1139,6 +1133,7 @@ class Cloth:
             self.stretch.update_u(Iu,Ju,Ku)
         return U
     
+### Added functions for Unity ##############
     def fromAddressToArray(self, address, length, tp):
         pointer_type = ctypes.POINTER(tp)
 
@@ -1146,6 +1141,20 @@ class Cloth:
 
         np_array = np.ctypeslib.as_array(raw_pointer, shape=(length,))
         return np_array
+    
+    def getPositionsUnity(self, smooth):
+        phi_all = self.Am@self.positions
+        for _ in range(smooth):
+            phi_all = self.S@phi_all
+        return phi_all.tolist()
+    
+    # def getNodePositions(self):
+    #     return self.positions.tolist()
+    
+############################
+    
+    
+    
     
     def limitControlVelocity(self, u_raw):
         u_raw_mat = u_raw.reshape((len(self.control), 3), order="F")
@@ -1163,8 +1172,11 @@ class Cloth:
 
     @profile
     def simulate(self, u, control, l):
-        u = self.fromAddressToArray(u, l*3, ctypes.c_float)
+        u = self.fromAddressToArray(u, l*3, ctypes.c_double)
         control = self.fromAddressToArray(control, l, ctypes.c_int32)
+        
+        # u = self.fromAddressToArray(u, l*3, ctypes.c_float)
+        # control = self.fromAddressToArray(control, l, ctypes.c_int32)
 
         #process the control inputs
         U = self.processControlInputs(u,control)

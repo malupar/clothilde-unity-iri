@@ -1,6 +1,0 @@
-{
-  "status": "Unsigned",
-  "reason": ".signature file could not be located in the package",
-  "isLegacy": true,
-  "errorCode": "ERR_LEGACY_SIGNATURE_FILE_NOT_FOUND"
-}

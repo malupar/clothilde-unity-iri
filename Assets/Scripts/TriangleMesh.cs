@@ -4,11 +4,13 @@ using System.Runtime.InteropServices;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 // using System.Numerics;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TriangleMesh : MonoBehaviour
 {
+#region Parameters
     [Header("Grid Settings")]
     public int numVertexWidth = 21;
     public int numVertexHeight = 21;
@@ -36,6 +38,8 @@ public class TriangleMesh : MonoBehaviour
     public bool selfCollisions = true;
     public int smooth = 2;
     public float slf = 1e-4f;
+
+#endregion
 
     // Mesh objects
     private Mesh meshUnity;
@@ -80,8 +84,12 @@ public class TriangleMesh : MonoBehaviour
         this.id = id;
     }
 }
+    // Last Python positions in Python coordinates.
+    // Shape is N x 3, where N = raw nodes + face-center render vertices.
+    // This is the source for picking/export, not meshUnity.vertices.
+    private double[][] latestPythonPositions = null;
 
-    // Grasp box methods
+#region Graspbox
     public Vector3 GetNodeWorldPosition(int nodeIndex)
     {
         if (meshUnity == null)
@@ -89,8 +97,9 @@ public class TriangleMesh : MonoBehaviour
             return transform.position;
         }
 
-        return meshUnity.vertices[nodeIndex];
+        return meshUnity.vertices[nodeIndex]; // ok here since it is only used for redering
     }
+
 
     // Logic to grasp nodes inside the grasp box
 
@@ -170,6 +179,73 @@ public class TriangleMesh : MonoBehaviour
         return candidates;
     }
 
+        int[,] getFacesTri() {
+        numFaces = (numVertexHeight-1)*(numVertexWidth-1)*8;
+        int cnt = 0, cntF = 0, diff = numVertexHeight*numVertexWidth;
+        int[,] faces = new int[numFaces, 3];
+        // Debug.Log("Numero caras: " + numFaces);
+        for (int i = 0; i < numVertexWidth-1; ++i) {
+            for (int j = 0; j < numVertexHeight-1; ++j) {
+                faces[cnt,0] = i*numVertexHeight+j; // LD
+                faces[cnt,1] = i*numVertexHeight+j+1; // LU
+                faces[cnt,2] = diff+cntF;
+                cnt += 1;
+                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight; // RD
+                faces[cnt,1] = i*numVertexHeight+j; // LD
+                faces[cnt,2] = diff+cntF;
+                cnt += 1;
+                faces[cnt,0] = i*numVertexHeight+j+1; //LU
+                faces[cnt,1] = i*numVertexHeight+j+1+numVertexHeight; // RU
+                faces[cnt,2] = diff+cntF;
+                cnt += 1;
+                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight+1; // RU
+                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight; //RD
+                faces[cnt,2] = diff+cntF;
+                cnt += 1;
+                cntF += 1;
+            }
+        }
+        cntF = 0;
+        for (int i = 0; i < numVertexWidth-1; ++i) {
+            for (int j = 0; j < numVertexHeight-1; ++j) {
+                faces[cnt,0] = i*numVertexHeight+j+1 + N;
+                faces[cnt,1] = i*numVertexHeight+j + N;
+                faces[cnt,2] = diff+cntF + N;
+                cnt += 1;
+                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight + N;
+                faces[cnt,0] = i*numVertexHeight+j + N;
+                faces[cnt,2] = diff+cntF + N;
+                cnt += 1;
+                faces[cnt,0] = i*numVertexHeight+j+1+numVertexHeight + N;
+                faces[cnt,1] = i*numVertexHeight+j+1 + N;
+                faces[cnt,2] = diff+cntF + N;
+                cnt += 1;
+                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight+1 + N;
+                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight + N;
+                faces[cnt,2] = diff+cntF + N;
+                cnt += 1;
+                cntF += 1;
+            }
+        }
+        return faces;
+    }
+
+    // four corners of a face: [face id, node ids]
+    public int[,] getFaces() {
+        int cnt = 0;
+        int[,] faces = new int[(numVertexHeight-1)*(numVertexWidth-1), 4];
+        for (int i = 0; i < numVertexWidth-1; ++i) {
+            for (int j = 0; j < numVertexHeight-1; ++j) {
+                faces[cnt,0] = i*numVertexHeight+j;
+                faces[cnt,1] = i*numVertexHeight+j+1;
+                faces[cnt,2] = i*numVertexHeight+j+numVertexHeight+1;
+                faces[cnt,3] = i*numVertexHeight+j+numVertexHeight;
+                cnt += 1;
+            }
+        }
+        return faces;
+    }
+
     // getEdges: inspired by getFaces method
     public int[,] getEdges()
     {
@@ -214,6 +290,10 @@ public class TriangleMesh : MonoBehaviour
 
         return edges;
     }
+
+#endregion
+
+#region Handle and Mesh
 
     // previous methods (Lucia): Commented
     void CreateHandle() {        
@@ -306,7 +386,11 @@ public class TriangleMesh : MonoBehaviour
 
         CreateHandle();
     }
+#endregion
 
+
+
+#region Awake
     void Awake() {
         simulated = new Dictionary<int, Vector3>();
         CreateGrid();
@@ -317,107 +401,134 @@ public class TriangleMesh : MonoBehaviour
         meshPython = connection.ImportClothScript();
     }
 
-    // Distintos ejes de coord.
-    private float[] V3ToArray(Vector3 vector) {
-        float[] floatArray = new float[3];
-        floatArray[0] = vector.x;
-        floatArray[1] = vector.z;
-        floatArray[2] = vector.y-1;
-        return floatArray;
+    private double[] V3ToArray(Vector3 vector) {
+        double[] arr = new double[3];
+        arr[0] = (double)vector.x;
+        arr[1] = (double)vector.z;
+        arr[2] = (double)vector.y - 1.0;
+        return arr;
     }
 
-    private Vector3 ArrayToV3(float[] vector) {
+    private Vector3 ArrayToV3(double[] vector) {
         Vector3 position;
-        position.x = vector[0];
-        position.y = vector[2]+1;
-        position.z = vector[1];
+        position.x = (float)vector[0];
+        position.y = (float)(vector[2] + 1.0);
+        position.z = (float)vector[1];
         return position;
     }
 
-    public float[,] getMeshPositions() {
-        Vector3[] v = meshUnity.vertices;
-        float[,] pos = new float[numVertexHeight*numVertexWidth, 3];
-        for (int i = 0; i < numVertexHeight*numVertexWidth; ++i) {
-            float[] posI = V3ToArray(v[i]);
-            for (int j = 0; j < 3; ++j) {
-                pos[i, j] = posI[j];
+    // private float[] V3ToArray(Vector3 vector) {
+    //     float[] arr = new float[3];
+    //     arr[0] = vector.x;
+    //     arr[1] = vector.z;
+    //     arr[2] = vector.y - 1.0f;
+    //     return arr;
+    // }
+
+    // private Vector3 ArrayToV3(float[] vector) {
+    //     Vector3 position;
+    //     position.x = vector[0];
+    //     position.y = vector[2] + 1.0f;
+    //     position.z = vector[1];
+    //     return position;
+    // }
+
+    // private Vector3 ArrayToV3Vector(float[] vector)
+    // {
+    //     Vector3 v;
+    //     v.x = vector[0];
+    //     v.y = vector[2];
+    //     v.z = vector[1];
+    //     return v;
+    // }
+
+    // public float[,] getMeshPositions() 
+    // {
+    //     Vector3[] v = meshUnity.vertices;
+    //     // Conversion done here (Not in Exporter.cs)
+    //     float[,] pos = new float[numVertexHeight*numVertexWidth, 3];
+    //     for (int i = 0; i < numVertexHeight*numVertexWidth; ++i) {
+    //         float[] posI = V3ToArray(v[i]);
+    //         for (int j = 0; j < 3; ++j) {
+    //             pos[i, j] = posI[j];
+    //         }
+    //     }
+    //     return pos;
+    // }
+
+    // //  used once to create meshPython:
+    // public double[,] getInitialMeshPositionsDouble()
+    // {
+    //     Vector3[] v = meshUnity.vertices;
+
+    //     int n = numVertexHeight * numVertexWidth;
+    //     double[,] pos = new double[n, 3];
+
+    //     for (int i = 0; i < n; i++)
+    //     {
+    //         // Unity coordinates -> Python coordinates
+    //         pos[i, 0] = (double)v[i].x;
+    //         pos[i, 1] = (double)v[i].z;
+    //         pos[i, 2] = (double)v[i].y - 1.0;
+    //     }
+
+    //     return pos;
+    // }
+    public double[,] getInitialMeshPositionsDouble()
+    {
+        int n = numVertexHeight * numVertexWidth;
+        double[,] pos = new double[n, 3];
+
+        int cnt = 0;
+
+        for (int x = 0; x < numVertexWidth; x++)
+        {
+            for (int y = 0; y < numVertexHeight; y++)
+            {
+                double posX = (double)x / (double)(numVertexWidth - 1);
+                double posY = (double)y / (double)(numVertexHeight - 1);
+
+                double xUnity = (double)originPosition.x + posX * (double)gridWidth;
+                double yUnity = (double)originPosition.y + 1.0;
+                double zUnity = (double)originPosition.z + posY * (double)gridHeight;
+
+                // Unity coordinates -> Python coordinates: (x, y, z) -> (x, z, y - 1)
+                pos[cnt, 0] = xUnity;
+                pos[cnt, 1] = zUnity;
+                pos[cnt, 2] = yUnity - 1.0;
+
+                cnt++;
             }
         }
+
         return pos;
+    }
+
+    // used later for export, after meshPython exists
+    public double[,] getMeshPositionsDouble()
+    {
+        // PYTHON TO UNITY
+        double[][] pos = meshPython.getPositionsUnity(0).AsManagedObject(typeof(double[][])) as double[][];
+
+        int n = numVertexHeight * numVertexWidth;
+        double[,] outPos = new double[n, 3];
+
+        for (int i = 0; i < n; i++)
+        {
+            outPos[i, 0] = pos[i][0];
+            outPos[i, 1] = pos[i][1];
+            outPos[i, 2] = pos[i][2];
+        }
+
+        return outPos;
     }
 
     public List<Vector3> getTotalMeshPositions() {
         return new List<Vector3> (meshUnity.vertices);
+        // Conversion done in Exporter.cs
     }
 
-    int[,] getFacesTri() {
-        numFaces = (numVertexHeight-1)*(numVertexWidth-1)*8;
-        int cnt = 0, cntF = 0, diff = numVertexHeight*numVertexWidth;
-        int[,] faces = new int[numFaces, 3];
-        // Debug.Log("Numero caras: " + numFaces);
-        for (int i = 0; i < numVertexWidth-1; ++i) {
-            for (int j = 0; j < numVertexHeight-1; ++j) {
-                faces[cnt,0] = i*numVertexHeight+j; // LD
-                faces[cnt,1] = i*numVertexHeight+j+1; // LU
-                faces[cnt,2] = diff+cntF;
-                cnt += 1;
-                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight; // RD
-                faces[cnt,1] = i*numVertexHeight+j; // LD
-                faces[cnt,2] = diff+cntF;
-                cnt += 1;
-                faces[cnt,0] = i*numVertexHeight+j+1; //LU
-                faces[cnt,1] = i*numVertexHeight+j+1+numVertexHeight; // RU
-                faces[cnt,2] = diff+cntF;
-                cnt += 1;
-                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight+1; // RU
-                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight; //RD
-                faces[cnt,2] = diff+cntF;
-                cnt += 1;
-                cntF += 1;
-            }
-        }
-        cntF = 0;
-        for (int i = 0; i < numVertexWidth-1; ++i) {
-            for (int j = 0; j < numVertexHeight-1; ++j) {
-                faces[cnt,0] = i*numVertexHeight+j+1 + N;
-                faces[cnt,1] = i*numVertexHeight+j + N;
-                faces[cnt,2] = diff+cntF + N;
-                cnt += 1;
-                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight + N;
-                faces[cnt,0] = i*numVertexHeight+j + N;
-                faces[cnt,2] = diff+cntF + N;
-                cnt += 1;
-                faces[cnt,0] = i*numVertexHeight+j+1+numVertexHeight + N;
-                faces[cnt,1] = i*numVertexHeight+j+1 + N;
-                faces[cnt,2] = diff+cntF + N;
-                cnt += 1;
-                faces[cnt,1] = i*numVertexHeight+j+numVertexHeight+1 + N;
-                faces[cnt,0] = i*numVertexHeight+j+numVertexHeight + N;
-                faces[cnt,2] = diff+cntF + N;
-                cnt += 1;
-                cntF += 1;
-            }
-        }
-        return faces;
-    }
-
-    // four corners of a face: [face id, node ids]
-    public int[,] getFaces() {
-        int cnt = 0;
-        int[,] faces = new int[(numVertexHeight-1)*(numVertexWidth-1), 4];
-        for (int i = 0; i < numVertexWidth-1; ++i) {
-            for (int j = 0; j < numVertexHeight-1; ++j) {
-                faces[cnt,0] = i*numVertexHeight+j;
-                faces[cnt,1] = i*numVertexHeight+j+1;
-                faces[cnt,2] = i*numVertexHeight+j+numVertexHeight+1;
-                faces[cnt,3] = i*numVertexHeight+j+numVertexHeight;
-                cnt += 1;
-            }
-        }
-        return faces;
-    }
-
-    private void updateHanldePosition(int i, Vector3 newWorldPosition) {
+    private void updateHandlePosition(int i, Vector3 newWorldPosition) {
         handles[i].transform.position = newWorldPosition;
     }
     // Asks the Python cloth object for the updated node positions,
@@ -431,7 +542,9 @@ public class TriangleMesh : MonoBehaviour
             textureChanged = true;
         }
 
-        float[][] pos = meshPython.getPositionsUnity(smooth).AsManagedObject(typeof(float[][])) as float[][];
+        // float[][] pos = meshPython.getPositionsUnity(smooth).AsManagedObject(typeof(float[][])) as float[][];
+        double[][] pos = meshPython.getPositionsUnity(0).AsManagedObject(typeof(double[][])) as double[][];
+
         Vector3[] meshVertices = new Vector3[N];
         Vector2[] uv = new Vector2[N];
         for (int i = 0; i < N; ++i) {
@@ -457,7 +570,7 @@ public class TriangleMesh : MonoBehaviour
 
         for (int i = 0; i < numHandles; ++i) {
             // Debug.Log(meshVertices[handles[i].nodeIndex]);
-            updateHanldePosition(i, meshVertices[handles[i].nodeIndex]);
+            updateHandlePosition(i, meshVertices[handles[i].nodeIndex]);
         }
 
     }
@@ -475,6 +588,9 @@ public class TriangleMesh : MonoBehaviour
         if (previousControlTargets.ContainsKey(idx))
             previousControlTargets.Remove(idx);
     }
+#endregion
+
+#region Update
 
     void Update() {
         if (meshPython == null) {
@@ -483,7 +599,10 @@ public class TriangleMesh : MonoBehaviour
         // Debug.Log("Se actualiza la tela");
         float d = Time.deltaTime;
         // Debug.Log("Ultima llamada hace: " + d);
-        List<float[]> positions = new List<float[]>();
+
+        List<double[]> positions = new List<double[]>();
+        // List<float[]> positions = new List<float[]>();
+
         List<int> controlNodes = new List<int>();
         
         foreach (var x in simulated) {
@@ -492,49 +611,20 @@ public class TriangleMesh : MonoBehaviour
             positions.Add(V3ToArray(x.Value));
         }
 
-// UPDATED: 
-// Old version: Used visual mesh position at the start (meshUnity.vertices[nodeIndex]) to new target;
-// This created problems since at every iteration, new position may not be the same as the visual one.
-// New version: Interpolates previous commanded target to new target.
+        // collect controlled nodes in a deterministic order
+
+        // foreach (var x in simulated.OrderBy(kv => kv.Key))
+        // {
+        //     int curN = x.Key;
+        //     controlNodes.Add(curN);
+        //     positions.Add(V3ToArray(x.Value));
+        // }
 
         int[] control = controlNodes.ToArray();
         int nums = positions.Count;
-        float[] pos = new float[nums*3];
 
-        GCHandle cHandle = GCHandle.Alloc(control, GCHandleType.Pinned);
-        long cPtr = (long)cHandle.AddrOfPinnedObject();
-
-        // for (int i = 0; i < nums; ++i)
-        //  {
-        //      int nodeIndex = control[i];
-
-        //      if (!previousControlTargets.ContainsKey(nodeIndex))
-        //      {
-        //          previousControlTargets[nodeIndex] = meshUnity.vertices[nodeIndex];
-        //      }
-        // }
-
-        // for (int it = 0; it < numIter; ++it)
-        // {
-        // for (int i = 0; i < nums; ++i)
-        // {
-        //     int nodeIndex = control[i];
-
-        //     Vector3 startWorld = previousControlTargets[nodeIndex]; // previous target sent to Python
-        //     Vector3 targetWorld = ArrayToV3(positions[i]); // new target from mouse
-
-        //     // // Python style
-        //     float[] p = V3ToArray(startWorld);
-        //     float[] target = V3ToArray(targetWorld);
-
-        //     float s = (float)(it + 1) / numIter;
-
-        //     for (int j = 0; j < 3; ++j)
-        //     {
-        //         pos[i * 3 + j] = p[j] + s * (target[j] - p[j]);
-        //         // pos[i * 3 + j] = positions[i][j];
-        //     }
-        //     }
+        double[] pos = new double[nums*3];
+        // float[] pos = new float[nums*3];
 
         for (int i = 0; i < nums; ++i)
         {
@@ -543,6 +633,11 @@ public class TriangleMesh : MonoBehaviour
                 pos[i * 3 + j] = positions[i][j];
             }
         }
+
+        //UNITY TO PYTHON
+
+        GCHandle cHandle = GCHandle.Alloc(control, GCHandleType.Pinned);
+        long cPtr = (long)cHandle.AddrOfPinnedObject();
 
         GCHandle vHandle = GCHandle.Alloc(pos, GCHandleType.Pinned);
         long vPtr = (long)vHandle.AddrOfPinnedObject();
@@ -554,6 +649,7 @@ public class TriangleMesh : MonoBehaviour
 
         loadPositionsFromMesh();
     }
+#endregion
 }
 
 

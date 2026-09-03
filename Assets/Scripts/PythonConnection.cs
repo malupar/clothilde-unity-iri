@@ -9,13 +9,13 @@ public class PythonConnection : MonoBehaviour
 {
 
     // Dependencies for conda env
-    public const string CondaEnvPath = @"C:\Users\maparicio\miniconda3\envs\cholmod_env";
-    public const string PythonDllName = "python311.dll";
-    public const string PythonScripts = @"C:\Users\maparicio\Documents\My project\Assets\Scripts";
-
-    // public const string CondaEnvPath = @"C:\Users\abhil\miniconda3\envs\clothilde_env";
+    // public const string CondaEnvPath = @"C:\Users\maparicio\miniconda3\envs\cholmod_env";
     // public const string PythonDllName = "python311.dll";
-    // public const string PythonScripts = @"Z:\vs\clothilde-unity-iri\Assets\Scripts";
+    // public const string PythonScripts = @"C:\Users\maparicio\Documents\My project\Assets\Scripts";
+
+    public const string CondaEnvPath = @"C:\Users\abhil\miniconda3\envs\clothilde_env";
+    public const string PythonDllName = "python311.dll";
+    public const string PythonScripts = @"Z:\vs\clothilde-unity-iri\Assets\Scripts";
 
 
     private dynamic meshPython;
@@ -79,7 +79,10 @@ public class PythonConnection : MonoBehaviour
                     Debug.Log("Cloth.py imported successfully.");
                 }
 
-                meshPython = clothModule.Cloth(mesh.getMeshPositions(), mesh.getFaces());
+                // mesh.getInitialMeshPositionsDouble() here because mesh.getMeshPositionsDouble()
+                // is null since Python object doesn't exist yet. Here Unity mesh is first created 
+                // and then the Python cloth object.
+                meshPython = clothModule.Cloth(mesh.getInitialMeshPositionsDouble(), mesh.getFaces());
                 Debug.Log(meshPython);
 
                 meshPython.setSimulatorParameters(dt: mesh.dt,
